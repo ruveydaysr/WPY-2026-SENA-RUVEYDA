@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 
@@ -52,11 +53,19 @@ if (
     $_SESSION["kullanici_id"] = $kullanici_id;
     $_SESSION["rol"] = $rol;
 
+    // ROOT yönlendirmesi
+    if ($rol === "root") {
+        header("Location: root/root-panel.php");
+        exit();
+    }
+
+    // Müşteri yönlendirmesi
     if ($rol === "musteri") {
         header("Location: musteri-panel.html");
         exit();
     }
 
+    // Diğer roller daha sonra eklenecek
     die("Bu kullanıcı rolü için giriş yönlendirmesi henüz hazırlanmadı.");
 
 } else {
