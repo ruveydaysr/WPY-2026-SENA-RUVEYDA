@@ -64,9 +64,19 @@ if (
         header("Location: musteri-panel.html");
         exit();
     }
+    // Müdürlük yönlendirmesi
+if ($rol === "mudur") {
+    header("Location: mudurluk/mudur-panel.php");
+    exit();
+}
 
-    // Diğer roller daha sonra eklenecek
-    die("Bu kullanıcı rolü için giriş yönlendirmesi henüz hazırlanmadı.");
+// Teknisyen yönlendirmesi
+if ($rol === "teknisyen" || $rol === "teknik") {
+    header("Location: teknisyen/teknisyen-panel.php");
+    exit();
+}
+
+die("Geçersiz kullanıcı rolü.");
 
 } else {
     mysqli_stmt_close($stmt);
