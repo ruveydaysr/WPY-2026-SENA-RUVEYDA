@@ -13,6 +13,9 @@ if (
 }
 
 // Devam eden servis kayıtlarını getir
+
+$teknisyen_id = (int) $_SESSION["kullanici_id"];
+
 $sql = "SELECT
             servisler.id,
             kullanicilar.adsoyad,
@@ -23,15 +26,20 @@ $sql = "SELECT
             servisler.durum
         FROM servisler
         INNER JOIN kullanicilar
-            ON servisler.kullanici_id = kullanicilar.id
-        WHERE servisler.durum IN (
+        ON servisler.kullanici_id = kullanicilar.id
+        WHERE servisler.teknisyen_id = ?
+        AND servisler.durum IN (
             'İnceleniyor',
             'İşlemde',
             'Parça Bekliyor'
         )
         ORDER BY servisler.id DESC";
 
-$sonuc = mysqli_query($baglanti, $sql);
+$stmt = mysqli_prepare($baglanti, $sql);
+mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_execute($stmt);
+$sonuc = mysqli_stmt_get_result($stmt);
+
 
 if (!$sonuc) {
     die("Devam eden servisler alınamadı.");

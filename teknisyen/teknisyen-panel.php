@@ -12,28 +12,48 @@ if (
     exit();
 }
 
-// Sistemdeki toplam servis sayısı
-$sonuc = mysqli_query($baglanti, "SELECT COUNT(*) AS toplam FROM servisler");
+
+$teknisyen_id = (int) $_SESSION["kullanici_id"];
+
+// Teknisyene atanan toplam servis sayısı
+$stmt = mysqli_prepare(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam FROM servisler
+     WHERE teknisyen_id = ?"
+);
+mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_execute($stmt);
+$sonuc = mysqli_stmt_get_result($stmt);
 $toplam_servis = (int) mysqli_fetch_assoc($sonuc)["toplam"];
+mysqli_stmt_close($stmt);
 
-// Devam eden servisler
-$sonuc = mysqli_query(
+// Devam eden servis sayısı
+$stmt = mysqli_prepare(
     $baglanti,
     "SELECT COUNT(*) AS toplam FROM servisler
-     WHERE durum IN ('İnceleniyor', 'İşlemde', 'Parça Bekliyor')"
+     WHERE teknisyen_id = ?
+     AND durum IN ('İnceleniyor', 'İşlemde', 'Parça Bekliyor')"
 );
+mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_execute($stmt);
+$sonuc = mysqli_stmt_get_result($stmt);
 $devam_eden = (int) mysqli_fetch_assoc($sonuc)["toplam"];
+mysqli_stmt_close($stmt);
 
-// Tamamlanan servisler
-$sonuc = mysqli_query(
+// Tamamlanan servis sayısı
+$stmt = mysqli_prepare(
     $baglanti,
     "SELECT COUNT(*) AS toplam FROM servisler
-     WHERE durum IN ('Tamamlandı', 'Teslim Edildi')"
+     WHERE teknisyen_id = ?
+     AND durum IN ('Tamamlandı', 'Teslim Edildi')"
 );
+mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_execute($stmt);
+$sonuc = mysqli_stmt_get_result($stmt);
 $tamamlanan = (int) mysqli_fetch_assoc($sonuc)["toplam"];
+mysqli_stmt_close($stmt);
 
- 
-// Son eklenen 5 servis kaydını getir
+// Teknisyene atanan son 5 servis
 $sql = "SELECT
             servisler.id,
             servisler.cihaz,
@@ -43,11 +63,15 @@ $sql = "SELECT
             kullanicilar.adsoyad
         FROM servisler
         INNER JOIN kullanicilar
-            ON servisler.kullanici_id = kullanicilar.id
+        ON servisler.kullanici_id = kullanicilar.id
+        WHERE servisler.teknisyen_id = ?
         ORDER BY servisler.id DESC
         LIMIT 5";
 
-$son_servisler = mysqli_query($baglanti, $sql);
+$stmt = mysqli_prepare($baglanti, $sql);
+mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_execute($stmt);
+$son_servisler = mysqli_stmt_get_result($stmt);
 
 if (!$son_servisler) {
     die("Servis kayıtları alınamadı.");

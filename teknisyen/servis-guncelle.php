@@ -56,6 +56,7 @@ foreach ([$parca_ucreti, $iscilik_ucreti] as $ucret) {
 
 $parca_ucreti = (float)$parca_ucreti;
 $iscilik_ucreti = (float)$iscilik_ucreti;
+$teknisyen_id = (int) $_SESSION["kullanici_id"];
 
 $sql = "UPDATE servisler
         SET ariza_tespiti = ?,
@@ -64,24 +65,46 @@ $sql = "UPDATE servisler
             parca_ucreti = ?,
             iscilik_ucreti = ?,
             durum = ?
-        WHERE id = ?";
+        WHERE id = ?
+        AND teknisyen_id = ?";
 
 $stmt = mysqli_prepare($baglanti, $sql);
 
+
 mysqli_stmt_bind_param(
     $stmt,
-    "sssddsi",
+    "sssddsii",
     $ariza_tespiti,
     $yapilan_islem,
     $kullanilan_parca,
     $parca_ucreti,
     $iscilik_ucreti,
     $durum,
-    $id
+    $id,
+    $teknisyen_id
 );
+
 
 if (!mysqli_stmt_execute($stmt)) {
     exit("Servis güncellenirken hata oluştu.");
+}
+if (mysqli_stmt_affected_rows($stmt) === 0) {
+    // Kayıt bulunamadı mı, yoksa bilgiler zaten aynı mı?
+    $kontrol = mysqli_prepare(
+        $baglanti,
+        "SELECT id FROM servisler WHERE id = ? AND teknisyen_id = ?"
+    );
+
+    mysqli_stmt_bind_param($kontrol, "ii", $id, $teknisyen_id);
+    mysqli_stmt_execute($kontrol);
+    mysqli_stmt_store_result($kontrol);
+
+    if (mysqli_stmt_num_rows($kontrol) === 0) {
+        http_response_code(403);
+        exit("Bu servisi güncelleme yetkiniz yok.");
+    }
+
+    mysqli_stmt_close($kontrol);
 }
 
 header("Location: servis-detay.php?id=" . $id);

@@ -34,10 +34,13 @@ servisler.iscilik_ucreti
           FROM servisler
           INNER JOIN kullanicilar
           ON servisler.kullanici_id = kullanicilar.id
-          WHERE servisler.id = ?";
+          WHERE servisler.id = ?
+          AND servisler.teknisyen_id = ?";
 
 $stmt = mysqli_prepare($baglanti, $sorgu);
-mysqli_stmt_bind_param($stmt, "i", $id);
+$teknisyen_id = (int) $_SESSION["kullanici_id"];
+
+mysqli_stmt_bind_param($stmt, "ii", $id, $teknisyen_id);
 mysqli_stmt_execute($stmt);
 
 $sonuc = mysqli_stmt_get_result($stmt);
