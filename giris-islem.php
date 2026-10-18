@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 
@@ -53,9 +52,15 @@ if (
     $_SESSION["kullanici_id"] = $kullanici_id;
     $_SESSION["rol"] = $rol;
 
-    // ROOT yönlendirmesi
+    // Admin (root) yönlendirmesi
     if ($rol === "root") {
         header("Location: root/root-panel.php");
+        exit();
+    }
+
+    // Yönetici yönlendirmesi
+    if ($rol === "yonetici") {
+        header("Location: yonetici/yonetici-panel.php");
         exit();
     }
 
@@ -64,19 +69,20 @@ if (
         header("Location: musteri-panel.html");
         exit();
     }
-    // Müdürlük yönlendirmesi
-if ($rol === "mudur") {
-    header("Location: mudurluk/mudur-panel.php");
-    exit();
-}
 
-// Teknisyen yönlendirmesi
-if ($rol === "teknisyen" || $rol === "teknik") {
-    header("Location: teknisyen/teknisyen-panel.php");
-    exit();
-}
+    // Müdür yönlendirmesi
+    if ($rol === "mudur") {
+        header("Location: mudurluk/mudur-panel.php");
+        exit();
+    }
 
-die("Geçersiz kullanıcı rolü.");
+    // Teknisyen yönlendirmesi
+    if ($rol === "teknisyen" || $rol === "teknik") {
+        header("Location: teknisyen/teknisyen-panel.php");
+        exit();
+    }
+
+    die("Geçersiz kullanıcı rolü.");
 
 } else {
     mysqli_stmt_close($stmt);
