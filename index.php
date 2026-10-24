@@ -3,99 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teknik Servis Takip Sistemi</title>
-    <link rel="stylesheet" href="style.css">
-
-    <style>
-        .giris-kartlari {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 20px;
-            max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-
-        .giris-karti {
-            background: white;
-            padding: 25px;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
-
-        .giris-karti h3 {
-            margin-top: 0;
-        }
-
-        .giris-karti p {
-            color: #555;
-            line-height: 1.6;
-        }
-
-        .giris-karti a {
-            display: inline-block;
-            padding: 12px 20px;
-            margin-top: 10px;
-            background: #2457a7;
-            color: white;
-            text-decoration: none;
-            border-radius: 7px;
-        }
-
-        .giris-karti a:hover {
-            background: #183e79;
-        }
-    </style>
+    <title>TeknoServis | Ana Sayfa</title>
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=3">
 </head>
 <body>
 
 <header>
-    <h1>Bilgisayar Teknik Servis</h1>
-
-    <nav>
-        <a href="index.php">Ana Sayfa</a>
-        <a href="kayit.php">Müşteri Kayıt</a>
-    </nav>
+    <div class="ust-menu">
+        <a href="index.php" class="logo">Tekno<span>Servis</span></a>
+        <nav aria-label="Ana menü">
+            <a href="index.php" aria-current="page">Ana Sayfa</a>
+            <a href="musteri/giris.php">Giriş Yap</a>
+            <a href="musteri/kayit.php">Kayıt Ol</a>
+        </nav>
+    </div>
 </header>
 
 <main>
-    <section class="ana-alan">
-        <h2>Teknik Servis Takip Sistemine Hoş Geldiniz</h2>
-        <p>Hesabınıza uygun giriş bölümünü seçiniz.</p>
+    <section class="tanitim">
+        <div>
+            <h1>Cihazınızın servis süreci <span>kontrolünüz altında.</span></h1>
+            <p class="aciklama">
+                Servis talebinizi oluşturun, cihazınızın durumunu
+                takip edin ve kayıtlarınıza tek bir panelden ulaşın.
+            </p>
+            <div class="butonlar">
+                <a href="giris.php" class="buton">Servis Talebi Oluştur</a>
+                <a href="giris.php" class="buton ikincil">Servisimi Takip Et</a>
+            </div>
+        </div>
+
+        <div class="kart">
+            <h2>Başvurudan teslimata</h2>
+            <p class="aciklama">Servis sürecini hesabınızdan izleyin.</p>
+            <ol class="adimlar">
+                <li>Servis talebinizi oluşturun.</li>
+                <li>Teknisyen incelemesi başlasın.</li>
+                <li>Servis durumunu takip edin.</li>
+                <li>İşlemi tamamlanan cihazınızı teslim alın.</li>
+            </ol>
+        </div>
     </section>
+    <section>
+    <h2>Servis işlemleriniz için tek adres</h2>
+    <p class="aciklama">
+        Hesabınızı oluşturun ve servis sürecinizi takip edin.
+    </p>
 
-    <section class="giris-kartlari" aria-label="Giriş seçenekleri">
-        <article class="giris-karti">
-            <h3>Müşteri</h3>
-            <p>Servis talebi oluşturun ve cihazınızın durumunu takip edin.</p>
-            <a href="giris.php?tur=musteri">Müşteri Girişi</a>
+    <div class="panel-kartlari">
+        <article class="panel-kart">
+            <h3>Talebinizi oluşturun</h3>
+            <p>Cihaz bilgilerini girerek yaşadığınız arızayı açıklayın.</p>
         </article>
 
-        <article class="giris-karti">
-            <h3>Teknisyen</h3>
-            <p>Size atanan servisleri görüntüleyin ve işlemleri güncelleyin.</p>
-            <a href="giris.php?tur=teknisyen">Teknisyen Girişi</a>
+        <article class="panel-kart">
+            <h3>Durumunu takip edin</h3>
+            <p>Servis kaydınızın güncel durumunu panelinizden görüntüleyin.</p>
         </article>
 
-        <article class="giris-karti">
-            <h3>Yönetici</h3>
-            <p>Müşteri taleplerini görüntüleyin ve teknisyen atayın.</p>
-            <a href="giris.php?tur=yonetici">Yönetici Girişi</a>
+        <article class="panel-kart">
+            <h3>Kayıtlarınıza ulaşın</h3>
+            <p>Önceki servis taleplerinizi bir arada görüntüleyin.</p>
         </article>
+    </div>
+</section>
 
-        <article class="giris-karti">
-            <h3>Admin (Root)</h3>
-            <p>Sistemin genel yönetim paneline erişin.</p>
-            <a href="giris.php?tur=root">Admin Girişi</a>
-        </article>
-    </section>
+<section class="kart alt-cagri">
+    <h2>İlk servis talebinizi oluşturun</h2>
+    <p class="aciklama">
+        Henüz hesabınız yoksa kayıt olarak başlayabilirsiniz.
+    </p>
+    <a href="kayit.php" class="buton">Hesap Oluştur</a>
+</section>
 </main>
 
-<footer>
-    <p>Bilgisayar Teknik Servis Takip ve Yönetim Sistemi</p>
-</footer>
+<footer>Bilgisayar Teknik Servis Takip ve Yönetim Sistemi</footer>
 
 </body>
 </html>
