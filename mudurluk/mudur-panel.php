@@ -1,131 +1,126 @@
-
 <?php
 session_start();
 
-if (
-    !isset($_SESSION["kullanici_id"]) ||
-    !isset($_SESSION["rol"]) ||
-    $_SESSION["rol"] !== "mudur"
-) {
+if (!isset($_SESSION["kullanici_id"])) {
+    header("Location: /teknik-servis/musteri/giris.php");
+    exit();
+}
+
+if (($_SESSION["rol"] ?? "") !== "mudur") {
     http_response_code(403);
     exit("Bu sayfaya erişim yetkiniz yok.");
 }
 
-include("../baglanti.php");
+require_once(__DIR__ . "/../baglanti.php");
+mysqli_set_charset($baglanti, "utf8mb4");
 
-function servisSayisi($baglanti, $durumlar = []) {
-    if (empty($durumlar)) {
-        $sonuc = mysqli_query($baglanti, "SELECT COUNT(*) AS toplam FROM servisler");
-        return (int) mysqli_fetch_assoc($sonuc)["toplam"];
-    }
+// Servis durumlarını tek sorguda sayıyoruz.
+$sql = "SELECT
+            COUNT(*) AS toplam,
+            COALESCE(SUM(durum = 'Bekliyor'), 0) AS bekleyen,
+            COALESCE(SUM(durum IN (
+                'İnceleniyor', 'İşlemde', 'Parça Bekliyor'
+            )), 0) AS devam_eden,
+            COALESCE(SUM(durum IN (
+                'Tamamlandı', 'Teslim Edildi'
+            )), 0) AS tamamlanan
+        FROM servisler";
 
-    $durumlar = array_map(
-        fn($durum) => "'" . mysqli_real_escape_string($baglanti, $durum) . "'",
-        $durumlar
-    );
-
-    $liste = implode(",", $durumlar);
-    $sonuc = mysqli_query(
-        $baglanti,
-        "SELECT COUNT(*) AS toplam FROM servisler WHERE durum IN ($liste)"
-    );
-
-    return (int) mysqli_fetch_assoc($sonuc)["toplam"];
-}
-
-$toplam = servisSayisi($baglanti);
-$bekleyen = servisSayisi($baglanti, ["Bekliyor"]);
-$devamEden = servisSayisi($baglanti, ["İnceleniyor", "İşlemde", "Parça Bekliyor"]);
-$tamamlanan = servisSayisi($baglanti, ["Tamamlandı", "Teslim Edildi"]);
+$sonuc = mysqli_query($baglanti, $sql);
+$sayilar = mysqli_fetch_assoc($sonuc);
 ?>
 
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Müdürlük Paneli</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-        }
-
-        header {
-            background-color: #34495e;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        main {
-            padding: 25px;
-        }
-
-        .kartlar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .kart {
-            background-color: white;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            min-width: 170px;
-        }
-
-        .kart h2 {
-            font-size: 17px;
-        }
-
-        .kart p {
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        a {
-            color: #34495e;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müdürlük Paneli | TeknoServis</title>
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
 <body>
 
 <header>
-    <h1>Müdürlük Paneli</h1>
-    <p>Bilgisayar Teknik Servis Sistemi</p>
+    <div class="ust-menu">
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
+
+        <nav aria-label="Müdürlük menüsü">
+            <a href="/teknik-servis/mudurluk/mudur-panel.php"
+               aria-current="page">
+                Panelim
+            </a>
+
+            <a href="/teknik-servis/mudurluk/servis-yonetimi.php">
+                Servis Yönetimi
+            </a>
+
+            <a href="/teknik-servis/musteri/cikis.php"
+               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
+                Çıkış Yap
+            </a>
+        </nav>
+    </div>
 </header>
 
 <main>
+    <h1>Müdürlük Paneli</h1>
+
+    <p class="aciklama">
+        Servislerin genel durumunu görüntüleyebilir
+        ve servis yönetimi ekranına ulaşabilirsiniz.
+    </p>
+
     <h2>Servis Durumları</h2>
 
-    <div class="kartlar">
-        <div class="kart">
-            <h2>Toplam Servis</h2>
-            <p><?php echo $toplam; ?></p>
-        </div>
+    <div class="panel-kartlari">
+        <section class="panel-kart">
+            <h3>Toplam Servis</h3>
+            <p class="sayac"><?= (int) $sayilar["toplam"] ?></p>
+            <p class="aciklama">Sistemdeki bütün servis kayıtları.</p>
+        </section>
 
-        <div class="kart">
-            <h2>Bekleyen Servis</h2>
-            <p><?php echo $bekleyen; ?></p>
-        </div>
+        <section class="panel-kart">
+            <h3>Bekleyen Servis</h3>
+            <p class="sayac"><?= (int) $sayilar["bekleyen"] ?></p>
+            <p class="aciklama">Durumu “Bekliyor” olan servisler.</p>
+        </section>
 
-        <div class="kart">
-            <h2>Devam Eden Servis</h2>
-            <p><?php echo $devamEden; ?></p>
-        </div>
+        <section class="panel-kart">
+            <h3>Devam Eden Servis</h3>
+            <p class="sayac"><?= (int) $sayilar["devam_eden"] ?></p>
+            <p class="aciklama">
+                İncelenen, işlemde olan veya parça bekleyen servisler.
+            </p>
+        </section>
 
-        <div class="kart">
-            <h2>Tamamlanan Servis</h2>
-            <p><?php echo $tamamlanan; ?></p>
-        </div>
+        <section class="panel-kart">
+            <h3>Tamamlanan Servis</h3>
+            <p class="sayac"><?= (int) $sayilar["tamamlanan"] ?></p>
+            <p class="aciklama">
+                Tamamlanan veya teslim edilen servisler.
+            </p>
+        </section>
     </div>
-    <p>
-    <a href="servis-yonetimi.php">Servis Yönetimi</a>
-</p>
-    <p><a href="../cikis.php">Çıkış Yap</a></p>
+
+    <section class="kart alt-cagri">
+        <h2>Servis Yönetimi</h2>
+        <p class="aciklama">
+            Servis kayıtlarını görüntülemek ve teknisyen
+            atama işlemlerine ulaşmak için devam edin.
+        </p>
+
+        <a href="/teknik-servis/mudurluk/servis-yonetimi.php"
+           class="buton">
+            Servisleri Yönet
+        </a>
+    </section>
 </main>
+
+<footer>
+    Bilgisayar Teknik Servis Takip ve Yönetim Sistemi
+</footer>
 
 </body>
 </html>

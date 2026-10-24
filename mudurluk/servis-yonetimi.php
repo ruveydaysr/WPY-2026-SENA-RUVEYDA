@@ -1,182 +1,208 @@
-
 <?php
 session_start();
 
-if (
-    !isset($_SESSION["kullanici_id"]) ||
-    !isset($_SESSION["rol"]) ||
-    $_SESSION["rol"] !== "mudur"
-) {
+if (!isset($_SESSION["kullanici_id"])) {
+    header("Location: /teknik-servis/musteri/giris.php");
+    exit();
+}
+
+if (($_SESSION["rol"] ?? "") !== "mudur") {
     http_response_code(403);
     exit("Bu sayfaya erişim yetkiniz yok.");
 }
 
-require_once("../baglanti.php");
+require_once(__DIR__ . "/../baglanti.php");
+mysqli_set_charset($baglanti, "utf8mb4");
 
+$id = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
 
-$sorgu = "SELECT servisler.id, kullanicilar.adsoyad,
-                 servisler.cihaz, servisler.marka,
-                 servisler.model, servisler.ariza,
-                 servisler.durum, servisler.tarih,
-                 teknisyen.adsoyad AS teknisyen_adi
-          FROM servisler
-          INNER JOIN kullanicilar
-          ON servisler.kullanici_id = kullanicilar.id
-          LEFT JOIN kullanicilar AS teknisyen
-          ON servisler.teknisyen_id = teknisyen.id
-          ORDER BY servisler.id DESC";
+if (!$id || $id < 1) {
+    http_response_code(400);
+    exit("Geçersiz servis numarası.");
+}
 
-$sonuc = mysqli_query($baglanti, $sorgu);
+$sorgu = mysqli_prepare(
+    $baglanti,
+    "SELECT s.*, k.adsoyad, k.email, k.telefon,
+            t.adsoyad AS teknisyen_adi
+     FROM servisler s
+     INNER JOIN kullanicilar k ON s.kullanici_id = k.id
+     LEFT JOIN kullanicilar t ON s.teknisyen_id = t.id
+     WHERE s.id = ?"
+);
+mysqli_stmt_bind_param($sorgu, "i", $id);
+mysqli_stmt_execute($sorgu);
+$sonuc = mysqli_stmt_get_result($sorgu);
+$servis = mysqli_fetch_assoc($sonuc);
+mysqli_stmt_close($sorgu);
+
+if (!$servis) {
+    http_response_code(404);
+    exit("Servis kaydı bulunamadı.");
+}
+
+$teknisyenler = mysqli_query(
+    $baglanti,
+    "SELECT id, adsoyad FROM kullanicilar
+     WHERE rol IN ('teknisyen', 'teknik')
+       AND durum = 'aktif'
+     ORDER BY adsoyad"
+);
+
+if (empty($_SESSION["csrf"])) {
+    $_SESSION["csrf"] = bin2hex(random_bytes(32));
+}
+
+function temizle($deger) {
+    return htmlspecialchars((string) ($deger ?? ""), ENT_QUOTES, "UTF-8");
+}
+
+function bilgi($deger) {
+    return trim((string) ($deger ?? "")) === ""
+        ? "Henüz girilmedi"
+        : temizle($deger);
+}
+
+$parca = (float) ($servis["parca_ucreti"] ?? 0);
+$iscilik = (float) ($servis["iscilik_ucreti"] ?? 0);
 ?>
 
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Servis Yönetimi</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-        }
-
-        header {
-            background-color: #34495e;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        main {
-            padding: 25px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: white;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #e5e5e5;
-        }
-
-        a {
-            color: #34495e;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servis Detayı | TeknoServis</title>
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
 <body>
 
 <header>
-    <h1>Servis Yönetimi</h1>
-    <p>Bilgisayar Teknik Servis Sistemi</p>
+    <div class="ust-menu">
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
+
+        <nav aria-label="Müdürlük menüsü">
+            <a href="/teknik-servis/mudurluk/mudur-panel.php">Panelim</a>
+            <a href="/teknik-servis/mudurluk/servis-yonetimi.php">
+                Servis Yönetimi
+            </a>
+            <a href="/teknik-servis/musteri/cikis.php"
+               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
+                Çıkış Yap
+            </a>
+        </nav>
+    </div>
 </header>
 
 <main>
-    <h2>Tüm Servis Kayıtları</h2>
-    <input
-    type="text"
-    id="servisAra"
-    placeholder="Müşteri adı veya servis no ara..."
-    onkeyup="servisAra()"
-    style="padding: 10px; width: 280px; margin-bottom: 15px;"
->
-<select id="durumFiltre" onchange="servisFiltrele()" style="padding: 10px; margin-bottom: 15px;">
-    <option value="">Tüm Servisler</option>
-    <option value="Bekliyor">Bekleyen Servisler</option>
-    <option value="devam">Devam Eden Servisler</option>
-    <option value="tamam">Tamamlanan Servisler</option>
-</select>
-    <table id="servisTablosu">
-        <tr>
-            <th>Servis No</th>
-            <th>Müşteri</th>
-            <th>Cihaz</th>
-            <th>Marka / Model</th>
-            <th>Arıza</th>
-            <th>Durum</th>
-            <th>Atanan Teknisyen</th>
-            <th>Tarih</th>
-            <th>İşlem</th>
-        </tr>
+    <h1>Servis Detayı #<?= (int) $servis["id"] ?></h1>
+    <p class="aciklama">
+        Müşteri bilgilerini, servis işlemlerini ve teknisyen atamasını görüntüleyin.
+    </p>
 
-        <?php while ($servis = mysqli_fetch_assoc($sonuc)): ?>
-        <tr>
-            <td><?php echo (int)$servis["id"]; ?></td>
-            <td><?php echo htmlspecialchars($servis["adsoyad"]); ?></td>
-            <td><?php echo htmlspecialchars($servis["cihaz"]); ?></td>
-            <td>
-                <?php
-                echo htmlspecialchars(
-                    $servis["marka"] . " " . $servis["model"]
-                );
-                ?>
-            </td>
-            <td><?php echo htmlspecialchars($servis["ariza"]); ?></td>
-            <td><?php echo htmlspecialchars($servis["durum"]); ?></td>
-            <td>
-    <?php
-    echo htmlspecialchars(
-        $servis["teknisyen_adi"] ?? "Henüz atanmadı",
-        ENT_QUOTES,
-        "UTF-8"
-    );
-    ?>
-</td>
-            <td><?php echo htmlspecialchars($servis["tarih"]); ?></td>
-            <td>
-    <a href="servis-detay.php?id=<?php echo (int)$servis['id']; ?>">
-        Detay
-    </a>
-</td>
-        </tr>
-        <?php endwhile; ?>
-    </table>
+    <div class="panel-kartlari">
+        <section class="panel-kart">
+            <h2>Müşteri Bilgileri</h2>
+            <p><strong>Ad Soyad:</strong> <?= temizle($servis["adsoyad"]) ?></p>
+            <p><strong>E-posta:</strong> <?= temizle($servis["email"]) ?></p>
+            <p><strong>Telefon:</strong> <?= temizle($servis["telefon"]) ?></p>
+        </section>
 
-    <p><a href="mudur-panel.php">Müdürlük Paneline Dön</a></p>
+        <section class="panel-kart">
+            <h2>Cihaz ve Servis</h2>
+            <p><strong>Cihaz:</strong> <?= temizle($servis["cihaz"]) ?></p>
+            <p><strong>Marka:</strong> <?= temizle($servis["marka"]) ?></p>
+            <p><strong>Model:</strong> <?= temizle($servis["model"]) ?></p>
+            <p><strong>Arıza:</strong> <?= temizle($servis["ariza"]) ?></p>
+            <p><strong>Durum:</strong> <?= temizle($servis["durum"]) ?></p>
+            <p><strong>Tarih:</strong> <?= temizle($servis["tarih"]) ?></p>
+        </section>
+    </div>
+
+    <section class="kart alt-cagri">
+        <h2>Teknisyen İşlemleri</h2>
+
+        <p>
+            <strong>Atanan Teknisyen:</strong>
+            <?= temizle($servis["teknisyen_adi"] ?? "Henüz atanmadı") ?>
+        </p>
+
+        <p>
+            <strong>Arıza Tespiti:</strong>
+            <?= bilgi($servis["ariza_tespiti"] ?? null) ?>
+        </p>
+
+        <p>
+            <strong>Yapılan İşlem:</strong>
+            <?= bilgi($servis["yapilan_islem"] ?? null) ?>
+        </p>
+
+        <p>
+            <strong>Kullanılan Parça:</strong>
+            <?= bilgi($servis["kullanilan_parca"] ?? null) ?>
+        </p>
+
+        <p>
+            <strong>Parça Ücreti:</strong>
+            <?= number_format($parca, 2, ",", ".") ?> TL
+        </p>
+
+        <p>
+            <strong>İşçilik Ücreti:</strong>
+            <?= number_format($iscilik, 2, ",", ".") ?> TL
+        </p>
+
+        <p>
+            <strong>Toplam Ücret:</strong>
+            <?= number_format($parca + $iscilik, 2, ",", ".") ?> TL
+        </p>
+    </section>
+
+    <section class="kart alt-cagri">
+        <h2>Teknisyen Atama</h2>
+
+        <?php if (mysqli_num_rows($teknisyenler) === 0): ?>
+            <p>Atama yapılabilecek aktif teknisyen bulunmuyor.</p>
+        <?php else: ?>
+            <form action="/teknik-servis/mudurluk/teknisyen-ata.php"
+                  method="POST"
+                  onsubmit="return confirm('Teknisyen atamasını kaydetmek istiyor musunuz?')">
+
+                <input type="hidden" name="csrf"
+                       value="<?= temizle($_SESSION["csrf"]) ?>">
+
+                <input type="hidden" name="servis_id"
+                       value="<?= (int) $servis["id"] ?>">
+
+                <label for="teknisyen_id">Teknisyen Seç</label>
+                <select name="teknisyen_id" id="teknisyen_id" required>
+                    <option value="">Teknisyen seçiniz</option>
+
+                    <?php while ($teknisyen = mysqli_fetch_assoc($teknisyenler)): ?>
+                        <option value="<?= (int) $teknisyen["id"] ?>"
+                            <?= (int) ($servis["teknisyen_id"] ?? 0) ===
+                                (int) $teknisyen["id"] ? "selected" : "" ?>>
+                            <?= temizle($teknisyen["adsoyad"]) ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+
+                <div class="butonlar">
+                    <button type="submit">Atamayı Kaydet</button>
+                </div>
+            </form>
+        <?php endif; ?>
+    </section>
+
+    <div class="butonlar">
+        <a href="/teknik-servis/mudurluk/servis-yonetimi.php"
+           class="buton ikincil">
+            Servis Yönetimine Dön
+        </a>
+    </div>
 </main>
-
-<script>
-function servisFiltrele() {
-    let arama = document.getElementById("servisAra").value.toLocaleLowerCase("tr");
-    let filtre = document.getElementById("durumFiltre").value;
-    let satirlar = document.querySelectorAll("#servisTablosu tr");
-
-    for (let i = 1; i < satirlar.length; i++) {
-        let servisNo = satirlar[i].cells[0].textContent.toLocaleLowerCase("tr");
-        let musteri = satirlar[i].cells[1].textContent.toLocaleLowerCase("tr");
-        let durum = satirlar[i].cells[5].textContent.trim();
-
-        let aramaUygun = servisNo.includes(arama) || musteri.includes(arama);
-        let durumUygun = false;
-
-        if (filtre === "") {
-            durumUygun = true;
-        } else if (filtre === "devam") {
-            durumUygun = ["İnceleniyor", "İşlemde", "Parça Bekliyor"].includes(durum);
-        } else if (filtre === "tamam") {
-            durumUygun = ["Tamamlandı", "Teslim Edildi"].includes(durum);
-        } else {
-            durumUygun = durum === filtre;
-        }
-
-        satirlar[i].style.display =
-            aramaUygun && durumUygun ? "" : "none";
-    }
-}
-
-function servisAra() {
-    servisFiltrele();
-}
-</script>
 
 </body>
 </html>
