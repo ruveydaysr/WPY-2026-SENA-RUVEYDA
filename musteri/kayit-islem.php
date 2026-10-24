@@ -26,7 +26,7 @@ if ($adsoyad === "" || $email === "" || $telefon === "" || $sifre === "") {
     $mesaj = "Şifre en az 8 karakter, en fazla 72 bayt olmalıdır.";
 } else {
     try {
-        require_once("baglanti.php");
+        require_once(__DIR__ . "/../baglanti.php");
         mysqli_set_charset($baglanti, "utf8mb4");
 
         $sifreli = password_hash($sifre, PASSWORD_DEFAULT);
@@ -62,7 +62,7 @@ if ($adsoyad === "" || $email === "" || $telefon === "" || $sifre === "") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kayıt Sonucu | TeknoServis</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=3">
 </head>
 <body>
 

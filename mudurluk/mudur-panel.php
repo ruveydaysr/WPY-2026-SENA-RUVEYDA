@@ -14,20 +14,47 @@ if (($_SESSION["rol"] ?? "") !== "mudur") {
 require_once(__DIR__ . "/../baglanti.php");
 mysqli_set_charset($baglanti, "utf8mb4");
 
-// Servis durumlarını tek sorguda sayıyoruz.
-$sql = "SELECT
-            COUNT(*) AS toplam,
-            COALESCE(SUM(durum = 'Bekliyor'), 0) AS bekleyen,
-            COALESCE(SUM(durum IN (
-                'İnceleniyor', 'İşlemde', 'Parça Bekliyor'
-            )), 0) AS devam_eden,
-            COALESCE(SUM(durum IN (
-                'Tamamlandı', 'Teslim Edildi'
-            )), 0) AS tamamlanan
-        FROM servisler";
+// Giriş yapan müdürün adı
+$id = (int) $_SESSION["kullanici_id"];
 
-$sonuc = mysqli_query($baglanti, $sql);
+$sorgu = mysqli_prepare(
+    $baglanti,
+    "SELECT adsoyad FROM kullanicilar WHERE id = ?"
+);
+mysqli_stmt_bind_param($sorgu, "i", $id);
+mysqli_stmt_execute($sorgu);
+mysqli_stmt_bind_result($sorgu, $adsoyad);
+$bulundu = mysqli_stmt_fetch($sorgu);
+mysqli_stmt_close($sorgu);
+
+if (!$bulundu) {
+    session_unset();
+    session_destroy();
+    header("Location: /teknik-servis/musteri/giris.php");
+    exit();
+}
+
+// Servis istatistikleri
+$sonuc = mysqli_query(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam,
+        COALESCE(SUM(durum = 'Bekliyor'), 0) AS bekleyen,
+        COALESCE(SUM(durum IN (
+            'İnceleniyor', 'İşlemde', 'Parça Bekliyor'
+        )), 0) AS devam,
+        COALESCE(SUM(durum IN (
+            'Tamamlandı', 'Teslim Edildi'
+        )), 0) AS tamamlanan
+     FROM servisler"
+);
 $sayilar = mysqli_fetch_assoc($sonuc);
+
+$kartlar = [
+    "toplam" => "Toplam Servis",
+    "bekleyen" => "Bekleyen Servis",
+    "devam" => "Devam Eden Servis",
+    "tamamlanan" => "Tamamlanan Servis"
+];
 ?>
 
 <!DOCTYPE html>
@@ -48,14 +75,14 @@ $sayilar = mysqli_fetch_assoc($sonuc);
 
         <nav aria-label="Müdürlük menüsü">
             <a href="/teknik-servis/mudurluk/mudur-panel.php"
-               aria-current="page">
-                Panelim
-            </a>
+               aria-current="page">Panelim</a>
 
             <a href="/teknik-servis/mudurluk/servis-yonetimi.php">
                 Servis Yönetimi
             </a>
-
+<a href="/teknik-servis/mudurluk/kullanici-yonetimi.php">
+    Kullanıcı Yönetimi
+</a>
             <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
@@ -68,54 +95,59 @@ $sayilar = mysqli_fetch_assoc($sonuc);
     <h1>Müdürlük Paneli</h1>
 
     <p class="aciklama">
-        Servislerin genel durumunu görüntüleyebilir
-        ve servis yönetimi ekranına ulaşabilirsiniz.
+        Hoş geldiniz,
+        <?= htmlspecialchars($adsoyad, ENT_QUOTES, "UTF-8") ?>.
+        Servisleri buradan yönetebilirsiniz.
     </p>
 
-    <h2>Servis Durumları</h2>
+    <div class="panel-kartlari">
+        <?php foreach ($kartlar as $alan => $baslik): ?>
+            <section class="panel-kart">
+                <h3><?= $baslik ?></h3>
+                <p class="sayac"><?= (int) $sayilar[$alan] ?></p>
+            </section>
+        <?php endforeach; ?>
+    </div>
+
+    <h2>Yönetim İşlemleri</h2>
 
     <div class="panel-kartlari">
         <section class="panel-kart">
-            <h3>Toplam Servis</h3>
-            <p class="sayac"><?= (int) $sayilar["toplam"] ?></p>
-            <p class="aciklama">Sistemdeki bütün servis kayıtları.</p>
-        </section>
-
-        <section class="panel-kart">
-            <h3>Bekleyen Servis</h3>
-            <p class="sayac"><?= (int) $sayilar["bekleyen"] ?></p>
-            <p class="aciklama">Durumu “Bekliyor” olan servisler.</p>
-        </section>
-
-        <section class="panel-kart">
-            <h3>Devam Eden Servis</h3>
-            <p class="sayac"><?= (int) $sayilar["devam_eden"] ?></p>
-            <p class="aciklama">
-                İncelenen, işlemde olan veya parça bekleyen servisler.
+            <h3>Tüm Servisler</h3>
+            <p>
+                Servis kayıtlarını görüntüleyin,
+                müşteri adına veya servis numarasına göre arayın.
             </p>
+            <a href="/teknik-servis/mudurluk/servis-yonetimi.php"
+               class="buton">
+                Servisleri Gör
+            </a>
         </section>
 
         <section class="panel-kart">
-            <h3>Tamamlanan Servis</h3>
-            <p class="sayac"><?= (int) $sayilar["tamamlanan"] ?></p>
-            <p class="aciklama">
-                Tamamlanan veya teslim edilen servisler.
+            <h3>Bekleyen Servisler</h3>
+            <p>
+                Bekleyen kayıtları açın, detaylarını inceleyin
+                ve uygun teknisyeni atayın.
             </p>
+            <a href="/teknik-servis/mudurluk/servis-yonetimi.php?durum=Bekliyor"
+               class="buton">
+                Bekleyenleri Gör
+            </a>
+        </section>
+
+        <section class="panel-kart">
+            <h3>Tamamlanan Servisler</h3>
+            <p>
+                İşlemi tamamlanan veya müşteriye
+                teslim edilen servisleri görüntüleyin.
+            </p>
+            <a href="/teknik-servis/mudurluk/servis-yonetimi.php?durum=tamam"
+               class="buton">
+                Tamamlananları Gör
+            </a>
         </section>
     </div>
-
-    <section class="kart alt-cagri">
-        <h2>Servis Yönetimi</h2>
-        <p class="aciklama">
-            Servis kayıtlarını görüntülemek ve teknisyen
-            atama işlemlerine ulaşmak için devam edin.
-        </p>
-
-        <a href="/teknik-servis/mudurluk/servis-yonetimi.php"
-           class="buton">
-            Servisleri Yönet
-        </a>
-    </section>
 </main>
 
 <footer>
