@@ -1,19 +1,7 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "musteri") {
-    http_response_code(403);
-    exit("Bu sayfaya erişiminiz yok.");
-}
-
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["musteri"]);
 
 $id = (int) $_SESSION["kullanici_id"];
 $mesaj = "";
@@ -26,7 +14,7 @@ function guvenli($deger) {
     return htmlspecialchars((string) $deger, ENT_QUOTES, "UTF-8");
 }
 
-// Giriş yapan müşterinin bilgileri
+// Müşterinin mevcut bilgileri
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT adsoyad, email, telefon, sifre
@@ -39,9 +27,9 @@ $bulundu = mysqli_stmt_fetch($sorgu);
 mysqli_stmt_close($sorgu);
 
 if (!$bulundu) {
-    session_unset();
+    $_SESSION = [];
     session_destroy();
-    header("Location: giris.php");
+    header("Location: /teknik-servis/musteri/giris.php");
     exit();
 }
 
@@ -121,20 +109,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profilim | TeknoServis</title>
-    <link rel="stylesheet" href="../style.css?v=4">
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
 <body>
 
 <header>
     <div class="ust-menu">
-        <a href="../index.php" class="logo">Tekno<span>Servis</span></a>
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
 
         <nav aria-label="Müşteri menüsü">
-            <a href="musteri-panel.php">Panelim</a>
-            <a href="servis-olustur.php">Servis Oluştur</a>
-            <a href="servis-takip.php">Servis Takip</a>
-            <a href="profil.php" aria-current="page">Profilim</a>
-            <a href="cikis.php"
+            <a href="/teknik-servis/musteri/musteri-panel.php">Panelim</a>
+            <a href="/teknik-servis/musteri/servis-olustur.php">Servis Oluştur</a>
+            <a href="/teknik-servis/musteri/servis-takip.php">Servis Takip</a>
+            <a href="/teknik-servis/musteri/profil.php"
+               aria-current="page">Profilim</a>
+            <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
             </a>
@@ -153,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <section class="panel-kart">
             <h2>Profil Bilgileri</h2>
 
-            <form method="POST" action="profil.php">
+            <form method="POST" action="/teknik-servis/musteri/profil.php">
                 <input type="hidden" name="csrf"
                        value="<?= guvenli($_SESSION["csrf"]) ?>">
                 <input type="hidden" name="islem" value="bilgi">
@@ -182,7 +173,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <section class="panel-kart">
             <h2>Şifre Değiştir</h2>
 
-            <form method="POST" action="profil.php">
+            <form method="POST" action="/teknik-servis/musteri/profil.php">
                 <input type="hidden" name="csrf"
                        value="<?= guvenli($_SESSION["csrf"]) ?>">
                 <input type="hidden" name="islem" value="sifre">

@@ -1,22 +1,10 @@
 <?php
-session_start();
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["mudur"]);
 
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "mudur") {
-    http_response_code(403);
-    exit("Bu sayfaya erişim yetkiniz yok.");
-}
-
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
-
-// Giriş yapan müdürün adı
 $id = (int) $_SESSION["kullanici_id"];
 
+// Müdürün adı
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT adsoyad FROM kullanicilar WHERE id = ?"
@@ -24,15 +12,8 @@ $sorgu = mysqli_prepare(
 mysqli_stmt_bind_param($sorgu, "i", $id);
 mysqli_stmt_execute($sorgu);
 mysqli_stmt_bind_result($sorgu, $adsoyad);
-$bulundu = mysqli_stmt_fetch($sorgu);
+mysqli_stmt_fetch($sorgu);
 mysqli_stmt_close($sorgu);
-
-if (!$bulundu) {
-    session_unset();
-    session_destroy();
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
 
 // Servis istatistikleri
 $sonuc = mysqli_query(
@@ -80,9 +61,7 @@ $kartlar = [
             <a href="/teknik-servis/mudurluk/servis-yonetimi.php">
                 Servis Yönetimi
             </a>
-<a href="/teknik-servis/mudurluk/kullanici-yonetimi.php">
-    Kullanıcı Yönetimi
-</a>
+
             <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
@@ -96,14 +75,14 @@ $kartlar = [
 
     <p class="aciklama">
         Hoş geldiniz,
-        <?= htmlspecialchars($adsoyad, ENT_QUOTES, "UTF-8") ?>.
+        <?= htmlspecialchars($adsoyad ?? "Müdür", ENT_QUOTES, "UTF-8") ?>.
         Servisleri buradan yönetebilirsiniz.
     </p>
 
     <div class="panel-kartlari">
         <?php foreach ($kartlar as $alan => $baslik): ?>
             <section class="panel-kart">
-                <h3><?= $baslik ?></h3>
+                <h3><?= htmlspecialchars($baslik, ENT_QUOTES, "UTF-8") ?></h3>
                 <p class="sayac"><?= (int) $sayilar[$alan] ?></p>
             </section>
         <?php endforeach; ?>
@@ -118,22 +97,20 @@ $kartlar = [
                 Servis kayıtlarını görüntüleyin,
                 müşteri adına veya servis numarasına göre arayın.
             </p>
+
             <a href="/teknik-servis/mudurluk/servis-yonetimi.php"
-               class="buton">
-                Servisleri Gör
-            </a>
+               class="buton">Servisleri Gör</a>
         </section>
 
         <section class="panel-kart">
             <h3>Bekleyen Servisler</h3>
             <p>
-                Bekleyen kayıtları açın, detaylarını inceleyin
+                Bekleyen kayıtların detaylarını inceleyin
                 ve uygun teknisyeni atayın.
             </p>
+
             <a href="/teknik-servis/mudurluk/servis-yonetimi.php?durum=Bekliyor"
-               class="buton">
-                Bekleyenleri Gör
-            </a>
+               class="buton">Bekleyenleri Gör</a>
         </section>
 
         <section class="panel-kart">
@@ -142,17 +119,14 @@ $kartlar = [
                 İşlemi tamamlanan veya müşteriye
                 teslim edilen servisleri görüntüleyin.
             </p>
+
             <a href="/teknik-servis/mudurluk/servis-yonetimi.php?durum=tamam"
-               class="buton">
-                Tamamlananları Gör
-            </a>
+               class="buton">Tamamlananları Gör</a>
         </section>
     </div>
 </main>
 
-<footer>
-    Bilgisayar Teknik Servis Takip ve Yönetim Sistemi
-</footer>
+<footer>Bilgisayar Teknik Servis Takip ve Yönetim Sistemi</footer>
 
 </body>
 </html>

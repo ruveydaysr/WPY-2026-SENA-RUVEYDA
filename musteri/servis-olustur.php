@@ -1,15 +1,6 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "musteri") {
-    http_response_code(403);
-    exit("Bu sayfaya erişiminiz yok.");
-}
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["musteri"]);
 
 if (empty($_SESSION["csrf"])) {
     $_SESSION["csrf"] = bin2hex(random_bytes(32));
@@ -33,11 +24,19 @@ if (empty($_SESSION["csrf"])) {
         </a>
 
         <nav aria-label="Müşteri menüsü">
-            <a href="/teknik-servis/musteri/musteri-panel.php">Panelim</a>
+            <a href="/teknik-servis/musteri/musteri-panel.php">
+                Panelim
+            </a>
             <a href="/teknik-servis/musteri/servis-olustur.php"
-               aria-current="page">Servis Oluştur</a>
-            <a href="/teknik-servis/musteri/servis-takip.php">Servis Takip</a>
-            <a href="/teknik-servis/musteri/profil.php">Profilim</a>
+               aria-current="page">
+                Servis Oluştur
+            </a>
+            <a href="/teknik-servis/musteri/servis-takip.php">
+                Servis Takip
+            </a>
+            <a href="/teknik-servis/musteri/profil.php">
+                Profilim
+            </a>
             <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
@@ -49,6 +48,7 @@ if (empty($_SESSION["csrf"])) {
 <main>
     <section class="form-alani">
         <h1>Servis Oluştur</h1>
+
         <p class="aciklama">
             Cihaz bilgilerinizi ve yaşadığınız sorunu yazın.
         </p>

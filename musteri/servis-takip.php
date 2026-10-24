@@ -1,18 +1,10 @@
 <?php
-session_start();
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["musteri"]);
 
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: giris.php");
-    exit();
+function guvenli($deger) {
+    return htmlspecialchars((string) $deger, ENT_QUOTES, "UTF-8");
 }
-
-if (($_SESSION["rol"] ?? "") !== "musteri") {
-    http_response_code(403);
-    exit("Bu sayfaya erişiminiz yok.");
-}
-
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
 
 $id = (int) $_SESSION["kullanici_id"];
 $limit = 5;
@@ -20,7 +12,7 @@ $limit = 5;
 $sayfa = filter_input(INPUT_GET, "sayfa", FILTER_VALIDATE_INT);
 $sayfa = max(1, $sayfa ?: 1);
 
-// Kullanıcının toplam servis sayısı
+// Müşterinin toplam servis sayısı
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT COUNT(*) FROM servisler WHERE kullanici_id = ?"
@@ -35,7 +27,7 @@ $son_sayfa = max(1, (int) ceil($toplam / $limit));
 $sayfa = min($sayfa, $son_sayfa);
 $baslangic = ($sayfa - 1) * $limit;
 
-// Yalnızca giriş yapan müşterinin servisleri
+// Yalnızca giriş yapan müşterinin kayıtları
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT id, cihaz, marka, model, ariza, durum, tarih
@@ -47,10 +39,6 @@ $sorgu = mysqli_prepare(
 mysqli_stmt_bind_param($sorgu, "iii", $id, $limit, $baslangic);
 mysqli_stmt_execute($sorgu);
 $sonuc = mysqli_stmt_get_result($sorgu);
-
-function guvenli($deger) {
-    return htmlspecialchars((string) $deger, ENT_QUOTES, "UTF-8");
-}
 ?>
 
 <!DOCTYPE html>
@@ -59,21 +47,25 @@ function guvenli($deger) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Servis Takip | TeknoServis</title>
-    <link rel="stylesheet" href="../style.css?v=4">
-
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
 <body>
 
 <header>
     <div class="ust-menu">
-        <a href="../index.php" class="logo">Tekno<span>Servis</span></a>
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
 
         <nav aria-label="Müşteri menüsü">
-            <a href="musteri-panel.php">Panelim</a>
-            <a href="servis-olustur.php">Servis Oluştur</a>
-            <a href="/teknik-servis/musteri/servis-takip.php">Servis Takip</a>
-            <a href="profil.php">Profilim</a>
-            <a href="cikis.php"
+            <a href="/teknik-servis/musteri/musteri-panel.php">Panelim</a>
+            <a href="/teknik-servis/musteri/servis-olustur.php">
+                Servis Oluştur
+            </a>
+            <a href="/teknik-servis/musteri/servis-takip.php"
+               aria-current="page">Servis Takip</a>
+            <a href="/teknik-servis/musteri/profil.php">Profilim</a>
+            <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
             </a>
@@ -91,7 +83,8 @@ function guvenli($deger) {
     <?php if ($toplam == 0): ?>
         <section class="kart">
             <p>Henüz servis kaydı oluşturmadınız.</p>
-            <a href="servis-olustur.php" class="buton">Servis Oluştur</a>
+            <a href="/teknik-servis/musteri/servis-olustur.php"
+               class="buton">Servis Oluştur</a>
         </section>
     <?php else: ?>
         <div class="servis-alani">
@@ -113,8 +106,7 @@ function guvenli($deger) {
                             <td><?= (int) $servis["id"] ?></td>
                             <td><?= guvenli($servis["cihaz"]) ?></td>
                             <td>
-                                <?= guvenli($servis["marka"]) ?>
-                                <?= guvenli($servis["model"]) ?>
+                                <?= guvenli($servis["marka"] . " " . $servis["model"]) ?>
                             </td>
                             <td><?= guvenli($servis["ariza"]) ?></td>
                             <td><?= guvenli($servis["durum"]) ?></td>
@@ -128,7 +120,8 @@ function guvenli($deger) {
         <?php if ($son_sayfa > 1): ?>
             <nav class="butonlar" aria-label="Servis sayfaları">
                 <?php if ($sayfa > 1): ?>
-                    <a class="buton" href="?sayfa=<?= $sayfa - 1 ?>">
+                    <a class="buton"
+                       href="/teknik-servis/musteri/servis-takip.php?sayfa=<?= $sayfa - 1 ?>">
                         Önceki
                     </a>
                 <?php endif; ?>
@@ -136,7 +129,8 @@ function guvenli($deger) {
                 <span>Sayfa <?= $sayfa ?> / <?= $son_sayfa ?></span>
 
                 <?php if ($sayfa < $son_sayfa): ?>
-                    <a class="buton" href="?sayfa=<?= $sayfa + 1 ?>">
+                    <a class="buton"
+                       href="/teknik-servis/musteri/servis-takip.php?sayfa=<?= $sayfa + 1 ?>">
                         Sonraki
                     </a>
                 <?php endif; ?>

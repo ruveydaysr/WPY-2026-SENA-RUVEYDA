@@ -1,18 +1,6 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "mudur") {
-    http_response_code(403);
-    exit("Bu sayfaya erişim yetkiniz yok.");
-}
-
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["mudur"]);
 
 $id = filter_input(INPUT_GET, "id", FILTER_VALIDATE_INT);
 
@@ -98,9 +86,6 @@ $iscilik = (float) ($servis["iscilik_ucreti"] ?? 0);
 
 <main>
     <h1>Servis Detayı #<?= (int) $servis["id"] ?></h1>
-    <p class="aciklama">
-        Müşteri bilgilerini, servis işlemlerini ve teknisyen atamasını görüntüleyin.
-    </p>
 
     <div class="panel-kartlari">
         <section class="panel-kart">

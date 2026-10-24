@@ -1,22 +1,10 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "musteri") {
-    http_response_code(403);
-    exit("Bu sayfaya erişiminiz yok.");
-}
-
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["musteri"]);
 
 $id = (int) $_SESSION["kullanici_id"];
 
-// Müşteri bilgileri
+// Müşterinin adı
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT adsoyad FROM kullanicilar WHERE id = ?"
@@ -24,29 +12,36 @@ $sorgu = mysqli_prepare(
 mysqli_stmt_bind_param($sorgu, "i", $id);
 mysqli_stmt_execute($sorgu);
 mysqli_stmt_bind_result($sorgu, $adsoyad);
-$bulundu = mysqli_stmt_fetch($sorgu);
+mysqli_stmt_fetch($sorgu);
 mysqli_stmt_close($sorgu);
-
-if (!$bulundu) {
-    session_unset();
-    session_destroy();
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
 
 // Müşterinin servis sayıları
 $sorgu = mysqli_prepare(
     $baglanti,
     "SELECT COUNT(*),
-            COALESCE(SUM(durum = 'Bekliyor'), 0)
-     FROM servisler
-     WHERE kullanici_id = ?"
+            COALESCE(SUM(durum = 'Bekliyor'), 0),
+            COALESCE(SUM(durum IN (
+                'İnceleniyor', 'İşlemde', 'Parça Bekliyor'
+            )), 0),
+            COALESCE(SUM(durum IN (
+                'Tamamlandı', 'Teslim Edildi'
+            )), 0)
+     FROM servisler WHERE kullanici_id = ?"
 );
 mysqli_stmt_bind_param($sorgu, "i", $id);
 mysqli_stmt_execute($sorgu);
-mysqli_stmt_bind_result($sorgu, $toplam, $bekleyen);
+mysqli_stmt_bind_result(
+    $sorgu, $toplam, $bekleyen, $devam_eden, $tamamlanan
+);
 mysqli_stmt_fetch($sorgu);
 mysqli_stmt_close($sorgu);
+
+$sayaclar = [
+    "Toplam Servis" => $toplam,
+    "Bekleyen Servis" => $bekleyen,
+    "Devam Eden Servis" => $devam_eden,
+    "Tamamlanan Servis" => $tamamlanan
+];
 ?>
 
 <!DOCTYPE html>
@@ -67,22 +62,14 @@ mysqli_stmt_close($sorgu);
 
         <nav aria-label="Müşteri menüsü">
             <a href="/teknik-servis/musteri/musteri-panel.php"
-               aria-current="page">
-                Panelim
-            </a>
-
+               aria-current="page">Panelim</a>
             <a href="/teknik-servis/musteri/servis-olustur.php">
                 Servis Oluştur
             </a>
-
             <a href="/teknik-servis/musteri/servis-takip.php">
                 Servis Takip
             </a>
-
-            <a href="/teknik-servis/musteri/profil.php">
-                Profilim
-            </a>
-
+            <a href="/teknik-servis/musteri/profil.php">Profilim</a>
             <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
@@ -94,7 +81,7 @@ mysqli_stmt_close($sorgu);
 <main>
     <h1>
         Hoş geldiniz,
-        <?= htmlspecialchars($adsoyad, ENT_QUOTES, "UTF-8") ?>
+        <?= htmlspecialchars($adsoyad ?? "Müşteri", ENT_QUOTES, "UTF-8") ?>
     </h1>
 
     <p class="aciklama">
@@ -102,21 +89,12 @@ mysqli_stmt_close($sorgu);
     </p>
 
     <div class="panel-kartlari">
-        <section class="panel-kart">
-            <h2>Toplam Servis</h2>
-            <p class="sayac"><?= (int) $toplam ?></p>
-            <p class="aciklama">
-                Oluşturduğunuz tüm servis kayıtları.
-            </p>
-        </section>
-
-        <section class="panel-kart">
-            <h2>Bekleyen Servis</h2>
-            <p class="sayac"><?= (int) $bekleyen ?></p>
-            <p class="aciklama">
-                Durumu “Bekliyor” olan kayıtlarınız.
-            </p>
-        </section>
+        <?php foreach ($sayaclar as $baslik => $sayi): ?>
+            <section class="panel-kart">
+                <h3><?= htmlspecialchars($baslik, ENT_QUOTES, "UTF-8") ?></h3>
+                <p class="sayac"><?= (int) $sayi ?></p>
+            </section>
+        <?php endforeach; ?>
     </div>
 
     <h2>İşlemlerim</h2>
@@ -124,45 +102,28 @@ mysqli_stmt_close($sorgu);
     <div class="panel-kartlari">
         <section class="panel-kart">
             <h3>Yeni Servis Talebi</h3>
-            <p>
-                Cihaz bilgilerinizi ve yaşadığınız arızayı bildirin.
-            </p>
-
+            <p>Cihaz bilgilerinizi ve yaşadığınız arızayı bildirin.</p>
             <a href="/teknik-servis/musteri/servis-olustur.php"
-               class="buton">
-                Servis Oluştur
-            </a>
+               class="buton">Servis Oluştur</a>
         </section>
 
         <section class="panel-kart">
             <h3>Servis Kayıtlarım</h3>
-            <p>
-                Kayıtlarınızı ve güncel servis durumlarını görüntüleyin.
-            </p>
-
+            <p>Kayıtlarınızı ve güncel servis durumlarını görüntüleyin.</p>
             <a href="/teknik-servis/musteri/servis-takip.php"
-               class="buton">
-                Servisleri Gör
-            </a>
+               class="buton">Servisleri Gör</a>
         </section>
 
         <section class="panel-kart">
             <h3>Profil Bilgilerim</h3>
-            <p>
-                Kişisel bilgilerinizi ve şifrenizi güncelleyin.
-            </p>
-
+            <p>Kişisel bilgilerinizi ve şifrenizi güncelleyin.</p>
             <a href="/teknik-servis/musteri/profil.php"
-               class="buton">
-                Profilime Git
-            </a>
+               class="buton">Profilime Git</a>
         </section>
     </div>
 </main>
 
-<footer>
-    Bilgisayar Teknik Servis Takip ve Yönetim Sistemi
-</footer>
+<footer>Bilgisayar Teknik Servis Takip ve Yönetim Sistemi</footer>
 
 </body>
 </html>

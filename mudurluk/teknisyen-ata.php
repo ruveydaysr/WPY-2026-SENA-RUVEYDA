@@ -1,46 +1,39 @@
 <?php
-session_start();
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "mudur") {
-    http_response_code(403);
-    exit("Bu işlem için yetkiniz yok.");
-}
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["mudur"]);
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: /teknik-servis/mudurluk/servis-yonetimi.php");
     exit();
 }
 
-// Formun bu oturumdan gönderildiğini kontrol et.
+// Form güvenliği
 $token = $_POST["csrf"] ?? "";
 
-if (!is_string($token) || empty($_SESSION["csrf"]) ||
-    !hash_equals($_SESSION["csrf"], $token)) {
+if (
+    !is_string($token) ||
+    empty($_SESSION["csrf"]) ||
+    !hash_equals($_SESSION["csrf"], $token)
+) {
     http_response_code(403);
-    exit("Formun süresi dolmuş. Servis detayını yenileyip tekrar deneyin.");
+    exit("Formun süresi dolmuş. Servis detayını yenileyin.");
 }
 
 $servis_id = filter_input(INPUT_POST, "servis_id", FILTER_VALIDATE_INT);
 $teknisyen_id = filter_input(INPUT_POST, "teknisyen_id", FILTER_VALIDATE_INT);
 
-if (!$servis_id || $servis_id < 1 ||
-    !$teknisyen_id || $teknisyen_id < 1) {
+if (
+    !$servis_id || $servis_id < 1 ||
+    !$teknisyen_id || $teknisyen_id < 1
+) {
     http_response_code(400);
     exit("Geçersiz servis veya teknisyen seçimi.");
 }
 
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
 try {
-    require_once(__DIR__ . "/../baglanti.php");
-    mysqli_set_charset($baglanti, "utf8mb4");
-
-    // Servisin varlığını kontrol et.
+    // Servis kaydı mevcut mu?
     $sorgu = mysqli_prepare(
         $baglanti,
         "SELECT id FROM servisler WHERE id = ?"
@@ -57,8 +50,7 @@ try {
         exit("Servis kaydı bulunamadı.");
     }
 
-    // Yalnızca aktif teknisyenlere atama yapılabilir.
-    // Kontrol ve güncelleme aynı sorguda gerçekleştirilir.
+    // Yalnızca aktif teknisyene atama yap.
     $sorgu = mysqli_prepare(
         $baglanti,
         "UPDATE servisler s
@@ -74,7 +66,7 @@ try {
     mysqli_stmt_close($sorgu);
 
     if ($degisen === 0) {
-        // Aynı teknisyen zaten atanmışsa da işlem başarılıdır.
+        // Aynı teknisyen zaten atanmış olabilir.
         $sorgu = mysqli_prepare(
             $baglanti,
             "SELECT s.id
@@ -93,7 +85,7 @@ try {
 
         if (!$atama_var) {
             http_response_code(400);
-            exit("Atama yapılamadı. Servisi ve aktif teknisyen seçimini kontrol edin.");
+            exit("Atama yapılamadı. Aktif bir teknisyen seçin.");
         }
     }
 

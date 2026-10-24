@@ -1,18 +1,6 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["kullanici_id"])) {
-    header("Location: /teknik-servis/musteri/giris.php");
-    exit();
-}
-
-if (($_SESSION["rol"] ?? "") !== "mudur") {
-    http_response_code(403);
-    exit("Bu sayfaya erişim yetkiniz yok.");
-}
-
-require_once(__DIR__ . "/../baglanti.php");
-mysqli_set_charset($baglanti, "utf8mb4");
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["mudur"]);
 
 function temizle($deger) {
     return htmlspecialchars((string) $deger, ENT_QUOTES, "UTF-8");
@@ -42,7 +30,7 @@ $aranan = "%" . $arama . "%";
 $tablolar = " FROM servisler s
              INNER JOIN kullanicilar k ON s.kullanici_id = k.id";
 
-// Filtreye uyan kayıt sayısı
+// Aramaya uyan servis sayısı
 $stmt = mysqli_prepare(
     $baglanti,
     "SELECT COUNT(*)" . $tablolar . $kosul
@@ -57,7 +45,7 @@ $son_sayfa = max(1, (int) ceil($toplam / $limit));
 $sayfa = min($sayfa, $son_sayfa);
 $baslangic = ($sayfa - 1) * $limit;
 
-// Sayfadaki servisler
+// Sayfada gösterilecek servisler
 $sql = "SELECT s.id, k.adsoyad, s.cihaz, s.marka, s.model,
                s.ariza, s.durum, s.tarih,
                t.adsoyad AS teknisyen_adi"
@@ -167,6 +155,7 @@ function sayfaYolu($sayfa, $arama, $durum) {
                         <th scope="col">İşlem</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     <?php while ($servis = mysqli_fetch_assoc($sonuc)): ?>
                         <tr>

@@ -1,181 +1,122 @@
-
 <?php
-require_once("root-kontrol.php");
+require_once(__DIR__ . "/root-kontrol.php");
 
-// İşlem geçmişini veritabanından getir
-$sorgu = "
-    SELECT
-        i.id,
-        i.yapan_kullanici_id,
-        i.hedef_kullanici_id,
-        i.islem_turu,
-        i.eski_deger,
-        i.yeni_deger,
-        i.islem_tarihi,
-        yapan.adsoyad AS yapan_ad,
-        hedef.adsoyad AS hedef_ad
-    FROM islem_kayitlari AS i
-    LEFT JOIN kullanicilar AS yapan
-        ON i.yapan_kullanici_id = yapan.id
-    LEFT JOIN kullanicilar AS hedef
-        ON i.hedef_kullanici_id = hedef.id
-    ORDER BY i.islem_tarihi DESC, i.id DESC
-";
+function guvenli($deger) {
+    return htmlspecialchars((string) ($deger ?? ""), ENT_QUOTES, "UTF-8");
+}
 
-$sonuc = mysqli_query($baglanti, $sorgu);
+function islemAdi($tur) {
+    $adlar = [
+        "durum_degistirme" => "Durum Değişikliği",
+        "rol_degistirme" => "Rol Değişikliği"
+    ];
+
+    return $adlar[$tur] ?? $tur;
+}
+
+$limit = 5;
+$sayfa = filter_input(INPUT_GET, "sayfa", FILTER_VALIDATE_INT);
+$sayfa = max(1, $sayfa ?: 1);
+
+// Toplam işlem sayısı
+$sonuc = mysqli_query(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam FROM islem_kayitlari"
+);
 
 if (!$sonuc) {
     http_response_code(500);
-    exit("İşlem geçmişi yüklenirken hata oluştu.");
+    exit("İşlem geçmişi yüklenemedi.");
 }
 
-// HTML çıktısını güvenli hale getir
-function guvenli($deger) {
-    return htmlspecialchars(
-        (string)($deger ?? ""),
-        ENT_QUOTES,
-        "UTF-8"
-    );
-}
+$toplam = (int) mysqli_fetch_assoc($sonuc)["toplam"];
+$son_sayfa = max(1, (int) ceil($toplam / $limit));
+$sayfa = min($sayfa, $son_sayfa);
+$baslangic = ($sayfa - 1) * $limit;
 
-// İşlem türünü anlaşılır şekilde göster
-function islemAdi($tur) {
-    if ($tur === "durum_degistirme") {
-        return "Durum Değişikliği";
-    }
+// En yeni işlemler önce listelenir.
+$sorgu = mysqli_prepare(
+    $baglanti,
+    "SELECT i.id, i.yapan_kullanici_id, i.hedef_kullanici_id,
+            i.islem_turu, i.eski_deger, i.yeni_deger, i.islem_tarihi,
+            yapan.adsoyad AS yapan_ad,
+            hedef.adsoyad AS hedef_ad
+     FROM islem_kayitlari i
+     LEFT JOIN kullanicilar yapan ON i.yapan_kullanici_id = yapan.id
+     LEFT JOIN kullanicilar hedef ON i.hedef_kullanici_id = hedef.id
+     ORDER BY i.islem_tarihi DESC, i.id DESC
+     LIMIT ? OFFSET ?"
+);
 
-    if ($tur === "rol_degistirme") {
-        return "Rol Değişikliği";
-    }
-
-    return $tur;
-}
+mysqli_stmt_bind_param($sorgu, "ii", $limit, $baslangic);
+mysqli_stmt_execute($sorgu);
+$sonuc = mysqli_stmt_get_result($sorgu);
 ?>
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>İşlem Geçmişi - ROOT</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-        }
-
-        header {
-            background-color: #202c3c;
-            color: white;
-            padding: 25px;
-            text-align: center;
-        }
-
-        main {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .geri {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #202c3c;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .kutu {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px #00000012;
-            overflow-x: auto;
-        }
-
-        h2 {
-            margin-top: 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 13px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #eaf0f7;
-        }
-
-        tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .rol {
-            color: #2563a6;
-            font-weight: bold;
-        }
-
-        .durum {
-            color: #218c4a;
-            font-weight: bold;
-        }
-
-        .bos {
-            text-align: center;
-            color: #777;
-            padding: 25px;
-        }
-    </style>
+    <title>İşlem Geçmişi | TeknoServis</title>
+    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
-
 <body>
 
 <header>
-    <h1>İşlem Geçmişi</h1>
-    <p>ROOT Yönetim Paneli</p>
+    <div class="ust-menu">
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
+
+        <nav aria-label="Root menüsü">
+            <a href="/teknik-servis/root/root-panel.php">Panelim</a>
+            <a href="/teknik-servis/root/kullanicilar.php">
+                Kullanıcı Yönetimi
+            </a>
+            <a href="/teknik-servis/root/islem-gecmisi.php"
+               aria-current="page">İşlem Geçmişi</a>
+            <a href="/teknik-servis/musteri/cikis.php"
+               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
+                Çıkış Yap
+            </a>
+        </nav>
+    </div>
 </header>
 
 <main>
+    <h1>İşlem Geçmişi</h1>
 
-    <a href="root-panel.php" class="geri">
-        ← ROOT Paneline Dön
-    </a>
+    <p class="aciklama">
+        Kullanıcıların rol ve hesap durumu değişikliklerini
+        buradan takip edebilirsiniz.
+    </p>
 
-    <div class="kutu">
+    <p>Toplam <?= $toplam ?> işlem kaydı bulunuyor.</p>
 
-        <h2>Yapılan İşlemler</h2>
+    <?php if ($toplam === 0): ?>
+        <section class="kart">
+            <p>Henüz işlem kaydı bulunmuyor.</p>
+        </section>
+    <?php else: ?>
+        <div class="servis-alani">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">İşlemi Yapan</th>
+                        <th scope="col">İşlem Yapılan Kullanıcı</th>
+                        <th scope="col">İşlem Türü</th>
+                        <th scope="col">Eski Değer</th>
+                        <th scope="col">Yeni Değer</th>
+                        <th scope="col">Tarih ve Saat</th>
+                    </tr>
+                </thead>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>İşlemi Yapan</th>
-                    <th>İşlem Yapılan Kullanıcı</th>
-                    <th>İşlem Türü</th>
-                    <th>Eski Değer</th>
-                    <th>Yeni Değer</th>
-                    <th>Tarih ve Saat</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-                <?php if (mysqli_num_rows($sonuc) > 0): ?>
-
+                <tbody>
                     <?php while ($kayit = mysqli_fetch_assoc($sonuc)): ?>
-
                         <tr>
-                            <td>
-                                <?= guvenli($kayit["id"]) ?>
-                            </td>
+                            <td><?= (int) $kayit["id"] ?></td>
 
                             <td>
                                 <?= guvenli($kayit["yapan_ad"] ?? "Silinmiş Kullanıcı") ?>
@@ -188,48 +129,41 @@ function islemAdi($tur) {
                             </td>
 
                             <td>
-                                <?php if ($kayit["islem_turu"] === "rol_degistirme"): ?>
-                                    <span class="rol">
-                                        <?= guvenli(islemAdi($kayit["islem_turu"])) ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="durum">
-                                        <?= guvenli(islemAdi($kayit["islem_turu"])) ?>
-                                    </span>
-                                <?php endif; ?>
+                                <?= guvenli(islemAdi($kayit["islem_turu"])) ?>
                             </td>
 
-                            <td>
-                                <?= guvenli($kayit["eski_deger"]) ?>
-                            </td>
-
-                            <td>
-                                <?= guvenli($kayit["yeni_deger"]) ?>
-                            </td>
-
-                            <td>
-                                <?= guvenli($kayit["islem_tarihi"]) ?>
-                            </td>
+                            <td><?= guvenli($kayit["eski_deger"]) ?></td>
+                            <td><?= guvenli($kayit["yeni_deger"]) ?></td>
+                            <td><?= guvenli($kayit["islem_tarihi"]) ?></td>
                         </tr>
-
                     <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
 
-                <?php else: ?>
-
-                    <tr>
-                        <td colspan="7" class="bos">
-                            Henüz işlem kaydı bulunmuyor.
-                        </td>
-                    </tr>
-
+        <?php if ($son_sayfa > 1): ?>
+            <nav class="butonlar" aria-label="İşlem geçmişi sayfaları">
+                <?php if ($sayfa > 1): ?>
+                    <a class="buton"
+                       href="/teknik-servis/root/islem-gecmisi.php?sayfa=<?= $sayfa - 1 ?>">
+                        Önceki
+                    </a>
                 <?php endif; ?>
 
-            </tbody>
-        </table>
+                <span>Sayfa <?= $sayfa ?> / <?= $son_sayfa ?></span>
 
-    </div>
-
+                <?php if ($sayfa < $son_sayfa): ?>
+                    <a class="buton"
+                       href="/teknik-servis/root/islem-gecmisi.php?sayfa=<?= $sayfa + 1 ?>">
+                        Sonraki
+                    </a>
+                <?php endif; ?>
+            </nav>
+        <?php endif; ?>
+    <?php endif; ?>
 </main>
 
 </body>
 </html>
+
+<?php mysqli_stmt_close($sorgu); ?>
