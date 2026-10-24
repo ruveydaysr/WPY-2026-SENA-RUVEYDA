@@ -56,57 +56,131 @@ foreach ([$parca_ucreti, $iscilik_ucreti] as $ucret) {
 
 $parca_ucreti = (float)$parca_ucreti;
 $iscilik_ucreti = (float)$iscilik_ucreti;
+
 $teknisyen_id = (int) $_SESSION["kullanici_id"];
 
-$sql = "UPDATE servisler
-        SET ariza_tespiti = ?,
-            yapilan_islem = ?,
-            kullanilan_parca = ?,
-            parca_ucreti = ?,
-            iscilik_ucreti = ?,
-            durum = ?
-        WHERE id = ?
-        AND teknisyen_id = ?";
+try {
+    mysqli_begin_transaction($baglanti);
 
-$stmt = mysqli_prepare($baglanti, $sql);
-
-
-mysqli_stmt_bind_param(
-    $stmt,
-    "sssddsii",
-    $ariza_tespiti,
-    $yapilan_islem,
-    $kullanilan_parca,
-    $parca_ucreti,
-    $iscilik_ucreti,
-    $durum,
-    $id,
-    $teknisyen_id
-);
-
-
-if (!mysqli_stmt_execute($stmt)) {
-    exit("Servis güncellenirken hata oluştu.");
-}
-if (mysqli_stmt_affected_rows($stmt) === 0) {
-    // Kayıt bulunamadı mı, yoksa bilgiler zaten aynı mı?
+    // Servisin mevcut bilgilerini getir ve kilitle
     $kontrol = mysqli_prepare(
         $baglanti,
-        "SELECT id FROM servisler WHERE id = ? AND teknisyen_id = ?"
+        "SELECT ariza_tespiti, yapilan_islem, kullanilan_parca,
+                parca_ucreti, iscilik_ucreti, durum
+         FROM servisler
+         WHERE id = ? AND teknisyen_id = ?
+         FOR UPDATE"
     );
 
     mysqli_stmt_bind_param($kontrol, "ii", $id, $teknisyen_id);
     mysqli_stmt_execute($kontrol);
-    mysqli_stmt_store_result($kontrol);
 
-    if (mysqli_stmt_num_rows($kontrol) === 0) {
+    $sonuc = mysqli_stmt_get_result($kontrol);
+    $eski = mysqli_fetch_assoc($sonuc);
+    mysqli_stmt_close($kontrol);
+
+    if (!$eski) {
+        mysqli_rollback($baglanti);
         http_response_code(403);
         exit("Bu servisi güncelleme yetkiniz yok.");
     }
 
-    mysqli_stmt_close($kontrol);
-}
+    // Değişiklikleri açıklama olarak hazırla
+    $degisiklikler = [];
 
-header("Location: servis-detay.php?id=" . $id);
-exit();
-?>
+    if (($eski["ariza_tespiti"] ?? "") !== $ariza_tespiti) {
+        $degisiklikler[] = "Arıza tespiti güncellendi: " . $ariza_tespiti;
+    }
+
+    if (($eski["yapilan_islem"] ?? "") !== $yapilan_islem) {
+        $degisiklikler[] = "Yapılan işlem güncellendi: " . $yapilan_islem;
+    }
+
+    if (($eski["kullanilan_parca"] ?? "") !== $kullanilan_parca) {
+        $degisiklikler[] = "Kullanılan parça güncellendi: " . $kullanilan_parca;
+    }
+
+    if ((float)$eski["parca_ucreti"] != $parca_ucreti) {
+        $degisiklikler[] = "Parça ücreti güncellendi: " . $parca_ucreti . " TL";
+    }
+
+    if ((float)$eski["iscilik_ucreti"] != $iscilik_ucreti) {
+        $degisiklikler[] = "İşçilik ücreti güncellendi: " . $iscilik_ucreti . " TL";
+    }
+
+    if ($eski["durum"] !== $durum) {
+        $degisiklikler[] = "Servis durumu değiştirildi.";
+    }
+
+    // Servis bilgilerini güncelle
+    $sql = "UPDATE servisler
+            SET ariza_tespiti = ?,
+                yapilan_islem = ?,
+                kullanilan_parca = ?,
+                parca_ucreti = ?,
+                iscilik_ucreti = ?,
+                durum = ?
+            WHERE id = ? AND teknisyen_id = ?";
+
+    $stmt = mysqli_prepare($baglanti, $sql);
+
+    mysqli_stmt_bind_param(
+        $stmt,
+        "sssddsii",
+        $ariza_tespiti,
+        $yapilan_islem,
+        $kullanilan_parca,
+        $parca_ucreti,
+        $iscilik_ucreti,
+        $durum,
+        $id,
+        $teknisyen_id
+    );
+
+    if (!mysqli_stmt_execute($stmt)) {
+        throw new Exception("Servis güncellenemedi.");
+    }
+
+    mysqli_stmt_close($stmt);
+
+    // Değişiklik varsa işlem geçmişine kaydet
+    if (!empty($degisiklikler)) {
+        $aciklama = implode(" | ", $degisiklikler);
+        $eski_durum = $eski["durum"];
+
+        $gecmis = mysqli_prepare(
+            $baglanti,
+            "INSERT INTO servis_islem_gecmisi
+             (servis_id, teknisyen_id, islem_aciklamasi,
+              eski_durum, yeni_durum)
+             VALUES (?, ?, ?, ?, ?)"
+        );
+
+        mysqli_stmt_bind_param(
+            $gecmis,
+            "iisss",
+            $id,
+            $teknisyen_id,
+            $aciklama,
+            $eski_durum,
+            $durum
+        );
+
+        if (!mysqli_stmt_execute($gecmis)) {
+            throw new Exception("İşlem geçmişi kaydedilemedi.");
+        }
+
+        mysqli_stmt_close($gecmis);
+    }
+
+    // Her iki işlem de başarılıysa kaydet
+    mysqli_commit($baglanti);
+
+    header("Location: servis-detay.php?id=" . $id);
+    exit();
+
+} catch (Throwable $e) {
+    mysqli_rollback($baglanti);
+    http_response_code(500);
+    exit("Servis güncellenirken bir hata oluştu.");
+}

@@ -49,6 +49,25 @@ $servis = mysqli_fetch_assoc($sonuc);
 if (!$servis) {
     die("Servis kaydı bulunamadı.");
 }
+
+$gecmis_sql = "SELECT
+                  servis_islem_gecmisi.islem_tarihi,
+                  servis_islem_gecmisi.islem_aciklamasi,
+                  servis_islem_gecmisi.eski_durum,
+                  servis_islem_gecmisi.yeni_durum,
+                  kullanicilar.adsoyad AS teknisyen_adi
+               FROM servis_islem_gecmisi
+               INNER JOIN kullanicilar
+                   ON servis_islem_gecmisi.teknisyen_id = kullanicilar.id
+               WHERE servis_islem_gecmisi.servis_id = ?
+               ORDER BY servis_islem_gecmisi.islem_tarihi DESC,
+                        servis_islem_gecmisi.id DESC";
+
+$gecmis_stmt = mysqli_prepare($baglanti, $gecmis_sql);
+mysqli_stmt_bind_param($gecmis_stmt, "i", $id);
+mysqli_stmt_execute($gecmis_stmt);
+$gecmis_sonuc = mysqli_stmt_get_result($gecmis_stmt);
+
 ?>
 
 <!DOCTYPE html>
@@ -134,6 +153,57 @@ if (!$servis) {
     <button type="submit">Değişiklikleri Kaydet</button>
 
 </form>
+
+<h2>Servis İşlem Geçmişi</h2>
+
+<table border="1" cellpadding="10" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Tarih</th>
+            <th>Teknisyen</th>
+            <th>Yapılan İşlem</th>
+            <th>Durum Değişikliği</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <?php if (mysqli_num_rows($gecmis_sonuc) > 0): ?>
+
+            <?php while ($kayit = mysqli_fetch_assoc($gecmis_sonuc)): ?>
+                <tr>
+                    <td>
+                        <?= htmlspecialchars($kayit["islem_tarihi"]) ?>
+                    </td>
+
+                    <td>
+                        <?= htmlspecialchars($kayit["teknisyen_adi"]) ?>
+                    </td>
+
+                    <td>
+                        <?= nl2br(htmlspecialchars($kayit["islem_aciklamasi"])) ?>
+                    </td>
+
+                    <td>
+                        <?php if ($kayit["eski_durum"] !== $kayit["yeni_durum"]): ?>
+                            <?= htmlspecialchars($kayit["eski_durum"]) ?>
+                            →
+                            <?= htmlspecialchars($kayit["yeni_durum"]) ?>
+                        <?php else: ?>
+                            Değişmedi
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endwhile; ?>
+
+        <?php else: ?>
+            <tr>
+                <td colspan="4">
+                    Henüz işlem geçmişi bulunmuyor.
+                </td>
+            </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
 
 </div>
 
