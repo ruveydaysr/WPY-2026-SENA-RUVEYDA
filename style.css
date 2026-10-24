@@ -1,159 +1,288 @@
+/* Genel düzen */
+* {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
-    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+    background: #f5f7fc;
+    color: #17233d;
+    line-height: 1.6;
+}
+
+a {
+    color: #365de5;
+    text-decoration: none;
 }
 
 header {
-    background-color: #333;
-    color: white;
-    padding: 20px;
-    text-align: center;
+    background: white;
+    border-bottom: 1px solid #e3e8f2;
+}
+
+.ust-menu {
+    width: 92%;
+    max-width: 1120px;
+    margin: auto;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: bold;
+    color: #17233d;
+}
+
+.logo span {
+    color: #365de5;
 }
 
 nav {
-    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
 nav a {
-    color: white;
-    text-decoration: none;
-    margin: 0 15px;
+    color: #4e5b73;
+    font-size: 14px;
+    font-weight: bold;
 }
 
-nav a:hover {
-    text-decoration: underline;
+nav a:hover,
+nav a[aria-current="page"] {
+    color: #365de5;
 }
 
-.ana-alan {
-    text-align: center;
-    padding: 100px 20px;
+main {
+    width: 92%;
+    max-width: 1120px;
+    margin: 45px auto;
 }
 
-.ana-alan h2 {
-    font-size: 32px;
+h1, h2, h3 {
+    line-height: 1.3;
 }
 
-.ana-alan p {
-    font-size: 18px;
-    margin-bottom: 30px;
+.aciklama {
+    color: #64718a;
 }
 
-.buton {
+/* Ana sayfa */
+.tanitim {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+    gap: 45px;
+    padding: 30px 0;
+}
+
+.tanitim h1 {
+    font-size: 42px;
+}
+
+.tanitim h1 span {
+    color: #365de5;
+}
+
+.kart,
+.form-alani,
+.panel-kart {
+    background: white;
+    padding: 28px;
+    border: 1px solid #e3e8f2;
+    border-radius: 16px;
+}
+
+.adimlar {
+    padding-left: 22px;
+}
+
+.adimlar li {
+    padding: 10px 0;
+}
+
+.butonlar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.buton,
+button {
     display: inline-block;
-    background-color: #333;
+    background: #365de5;
     color: white;
-    padding: 12px 25px;
-    text-decoration: none;
-    border-radius: 5px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 9px;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-.buton:hover {
-    background-color: #555;
+.buton:hover,
+button:hover {
+    background: #2548c5;
 }
 
-footer {
-    background-color: #333;
-    color: white;
-    text-align: center;
-    padding: 15px;
+.ikincil {
+    background: white;
+    color: #365de5;
+    border: 1px solid #dce3f0;
 }
+
+.ikincil:hover {
+    background: #eef2ff;
+}
+
+.alt-cagri {
+    margin-top: 35px;
+}
+
+/* Giriş, kayıt ve formlar */
 .form-alani {
-    width: 400px;
-    margin: 50px auto;
-    background-color: white;
-    padding: 30px;
-    border-radius: 5px;
+    max-width: 440px;
+    margin: auto;
 }
 
-.form-alani h2 {
-    text-align: center;
+.form-alani h1 {
+    margin-top: 0;
 }
 
-.form-alani label {
+label {
     display: block;
-    margin-top: 15px;
+    margin: 16px 0 7px;
+    font-weight: bold;
+    font-size: 14px;
 }
 
-.form-alani input {
+input,
+select,
+textarea {
     width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #dce3f0;
+    border-radius: 9px;
+    font: inherit;
+}
+
+input[readonly] {
+    background: #f5f7fc;
+    color: #64718a;
+}
+
+textarea {
+    resize: vertical;
 }
 
 .form-alani button {
     width: 100%;
-    padding: 12px;
-    margin-top: 20px;
-    background-color: #333;
-    color: white;
-    border: none;
-    cursor: pointer;
+    margin-top: 24px;
 }
 
-.form-alani button:hover {
-    background-color: #555;
-}
-
-.form-alani p {
+.form-alt {
     text-align: center;
-    margin-top: 20px;
-}
-.panel-alani {
-    width: 80%;
-    margin: 50px auto;
-    text-align: center;
+    font-size: 14px;
+    margin-bottom: 0;
 }
 
+/* Müşteri paneli */
 .panel-kartlari {
     display: flex;
-    justify-content: center;
-    gap: 30px;
-    margin-top: 40px;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
 .panel-kart {
-    width: 300px;
-    background-color: white;
-    padding: 30px;
-    border-radius: 5px;
-}
-.form-alani select,
-.form-alani textarea {
-    width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    box-sizing: border-box;
+    flex: 1 1 250px;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-.form-alani textarea {
-    resize: vertical;
+.sayac {
+    font-size: 36px;
+    font-weight: bold;
+    color: #365de5;
+    margin: 10px 0;
 }
+
+/* Servis tablosu */
 .servis-alani {
-    width: 80%;
-    margin: 50px auto;
+    overflow-x: auto;
 }
 
-.servis-alani h2 {
-    text-align: center;
-}
-
-.servis-alani table {
+table {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
-    margin-top: 30px;
+    background: white;
 }
 
-.servis-alani th,
-.servis-alani td {
-    border: 1px solid #ccc;
+th,
+td {
     padding: 12px;
-    text-align: center;
+    border: 1px solid #e3e8f2;
+    text-align: left;
 }
 
-.servis-alani th {
-    background-color: #333;
-    color: white;
+th {
+    background: #eef2ff;
+}
+
+td {
+    overflow-wrap: anywhere;
+}
+
+/* Alt bölüm ve klavye odağı */
+footer {
+    padding: 22px;
+    text-align: center;
+    color: #64718a;
+    border-top: 1px solid #e3e8f2;
+    font-size: 14px;
+}
+
+:focus-visible {
+    outline: 2px solid #365de5;
+    outline-offset: 3px;
+}
+
+/* Telefon ekranları */
+@media (max-width: 750px) {
+    .ust-menu {
+        flex-direction: column;
+        padding: 18px 0;
+    }
+
+    nav {
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .tanitim {
+        grid-template-columns: 1fr;
+        gap: 25px;
+        padding: 0;
+    }
+
+    .tanitim h1 {
+        font-size: 32px;
+    }
+
+    main {
+        margin: 30px auto;
+    }
+
+    .kart,
+    .form-alani,
+    .panel-kart {
+        padding: 22px;
+    }
 }
