@@ -12,10 +12,10 @@
     <div class="ust-menu">
         <a href="index.php" class="logo">Tekno<span>Servis</span></a>
         <nav aria-label="Ana menü">
-            <a href="index.php" aria-current="page">Ana Sayfa</a>
-            <a href="musteri/giris.php">Giriş Yap</a>
-            <a href="musteri/kayit.php">Kayıt Ol</a>
-        </nav>
+    <a href="index.php" aria-current="page">Ana Sayfa</a>
+    <a href="giris.php">Giriş Yap</a>
+    <a href="kayit.php">Kayıt Ol</a>
+</nav>
     </div>
 </header>
 

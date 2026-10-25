@@ -1,4 +1,5 @@
 <?php
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,7 +11,7 @@ function yetkiKontrol($izinli_roller) {
     global $baglanti;
 
     if (empty($_SESSION["kullanici_id"])) {
-        header("Location: /teknik-servis/musteri/giris.php");
+        header("Location: /teknik-servis/giris.php");
         exit();
     }
 
@@ -39,6 +40,7 @@ function yetkiKontrol($izinli_roller) {
 
     mysqli_stmt_bind_result($sorgu, $rol, $durum);
     $bulundu = mysqli_stmt_fetch($sorgu);
+
     mysqli_stmt_close($sorgu);
 
     // Pasif veya silinmiş hesabın oturumunu kapat.
@@ -46,11 +48,11 @@ function yetkiKontrol($izinli_roller) {
         $_SESSION = [];
         session_destroy();
 
-        header("Location: /teknik-servis/musteri/giris.php");
+        header("Location: /teknik-servis/giris.php");
         exit();
     }
 
-    // Rol değişmişse oturumu güncelle.
+    // Veritabanındaki güncel rolü oturuma aktar.
     $_SESSION["rol"] = $rol;
 
     if (!in_array($rol, $izinli_roller, true)) {
