@@ -288,3 +288,192 @@ body {
     background-color: #d4edda !important;
     color: #155724 !important;
 }
+
+/* TEKNOSERVIS - MAVI BEYAZ TEMA */
+
+body {
+    background-color: #f5f7ff;
+    color: #14264b;
+}
+
+/* Giris ekrani */
+
+.giris-kutusu {
+    border: 1px solid #e0e6f5;
+}
+
+.giris-kutusu h1,
+.giris-kutusu h2 {
+    color: #14264b;
+}
+
+.giris-kutusu button {
+    background-color: #365cf5;
+}
+
+.giris-kutusu button:hover {
+    background-color: #2448d8;
+}
+
+.ana-sayfa-link {
+    color: #365cf5;
+}
+
+/* Teknisyen paneli */
+
+.teknisyen-panel > h1,
+.teknisyen-panel > h2 {
+    color: #14264b;
+}
+
+.panel-kart {
+    border: 1px solid #e0e6f5;
+    box-shadow: none;
+}
+
+.panel-kart h3 {
+    color: #14264b;
+}
+
+.panel-kart p {
+    color: #365cf5;
+}
+
+.teknisyen-panel table {
+    box-shadow: none;
+}
+
+.teknisyen-panel th {
+    background-color: #edf1ff;
+    color: #14264b;
+}
+
+.teknisyen-panel td {
+    border-bottom: 1px solid #e0e6f5;
+}
+
+.teknisyen-panel table button {
+    background-color: #365cf5;
+}
+
+.teknisyen-panel table button:hover {
+    background-color: #2448d8;
+}
+
+/* Servis detay sayfasi */
+
+.servis-detay {
+    border: 1px solid #e0e6f5;
+    box-shadow: none;
+}
+
+.servis-detay h1,
+.cihaz-bilgileri h2 {
+    color: #14264b;
+}
+
+.cihaz-bilgileri {
+    background-color: #f5f7ff;
+}
+
+.servis-detay button {
+    background-color: #365cf5;
+}
+
+.servis-detay button:hover {
+    background-color: #2448d8;
+}
+
+/* Ortak butonlar */
+
+.geri-butonu {
+    background-color: #365cf5;
+}
+
+.geri-butonu:hover {
+    background-color: #2448d8;
+}
+
+.cikis-butonu {
+    background-color: #365cf5;
+}
+
+.cikis-butonu:hover {
+    background-color: #2448d8;
+}
+
+/* Kucuk ekran uyumu */
+
+@media (max-width: 768px) {
+    .teknisyen-panel {
+        width: 94%;
+    }
+
+    .panel-kartlar {
+        flex-direction: column;
+    }
+
+    .servis-detay {
+        width: auto;
+        margin: 20px 10px;
+        padding: 20px;
+    }
+
+    .giris-kutusu {
+        width: auto;
+        max-width: 350px;
+        margin: 70px 15px;
+    }
+}
+
+/* TEKNISYEN UST MENU */
+
+.teknisyen-ust-menu {
+    background-color: white;
+    padding: 25px 8%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e6f5;
+}
+
+.teknisyen-logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #14264b;
+    text-decoration: none;
+}
+
+.teknisyen-logo span {
+    color: #365cf5;
+}
+
+.teknisyen-ust-menu nav {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.teknisyen-ust-menu nav a {
+    text-decoration: none;
+    color: #14264b;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.teknisyen-ust-menu nav a:hover {
+    color: #365cf5;
+}
+
+@media (max-width: 768px) {
+    .teknisyen-ust-menu {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .teknisyen-ust-menu nav {
+        justify-content: center;
+        gap: 15px;
+    }
+}

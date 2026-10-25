@@ -13,17 +13,28 @@
 
         <h1>Bilgisayar Teknik Servis</h1>
         <h2>Teknisyen Girişi</h2>
+        <form action="../giris-islem.php" method="POST">
+        <label for="email">E-posta</label>
+<input
+    type="email"
+    id="email"
+    name="email"
+    placeholder="E-posta adresinizi giriniz"
+    required
+>
 
-        <form action="teknisyen-panel.html">
-            <label for="email">E-posta</label>
-            <input type="email" id="email" placeholder="E-posta adresinizi giriniz">
+<label for="sifre">Şifre</label>
+<input
+    type="password"
+    id="sifre"
+    name="sifre"
+    placeholder="Şifrenizi giriniz"
+    required
+>
 
-            <label for="sifre">Şifre</label>
-            <input type="password" id="sifre" placeholder="Şifrenizi giriniz">
-
-            <button type="submit">Giriş Yap</button>
+<button type="submit">Giriş Yap</button>
         </form>
-<a href="../index.html" class="ana-sayfa-link">
+<a href="../index.php" class="ana-sayfa-link">
     ← Ana Sayfaya Dön
 </a>
     </div>

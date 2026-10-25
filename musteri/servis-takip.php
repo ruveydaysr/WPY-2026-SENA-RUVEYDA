@@ -1,6 +1,10 @@
 <?php
 require_once(__DIR__ . "/../yetki-kontrol.php");
 yetkiKontrol(["musteri"]);
+// Ücret onay işlemleri için güvenlik anahtarı
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
 
 function guvenli($deger) {
     return htmlspecialchars((string) $deger, ENT_QUOTES, "UTF-8");
@@ -30,11 +34,12 @@ $baslangic = ($sayfa - 1) * $limit;
 // Yalnızca giriş yapan müşterinin kayıtları
 $sorgu = mysqli_prepare(
     $baglanti,
-    "SELECT id, cihaz, marka, model, ariza, durum, tarih
-     FROM servisler
-     WHERE kullanici_id = ?
-     ORDER BY id DESC
-     LIMIT ? OFFSET ?"
+"SELECT id, cihaz, marka, model, ariza, durum, tarih,
+        tahmini_ucret, ucret_onay_durumu
+ FROM servisler
+ WHERE kullanici_id = ?
+ ORDER BY id DESC
+ LIMIT ? OFFSET ?"
 );
 mysqli_stmt_bind_param($sorgu, "iii", $id, $limit, $baslangic);
 mysqli_stmt_execute($sorgu);
@@ -97,6 +102,8 @@ $sonuc = mysqli_stmt_get_result($sorgu);
                         <th scope="col">Arıza</th>
                         <th scope="col">Durum</th>
                         <th scope="col">Tarih</th>
+                        <th scope="col">Tahmini Ücret</th>
+                        <th scope="col">Ücret Onayı</th>
                     </tr>
                 </thead>
 
@@ -111,6 +118,44 @@ $sonuc = mysqli_stmt_get_result($sorgu);
                             <td><?= guvenli($servis["ariza"]) ?></td>
                             <td><?= guvenli($servis["durum"]) ?></td>
                             <td><?= guvenli($servis["tarih"]) ?></td>
+                            
+<td>
+    <?php if ($servis["tahmini_ucret"] !== null): ?>
+        <?= number_format((float)$servis["tahmini_ucret"], 2, ",", ".") ?> TL
+    <?php else: ?>
+        Henüz belirlenmedi
+    <?php endif; ?>
+</td>
+
+<td>
+    
+<?php if ($servis["ucret_onay_durumu"] === "Bekliyor"): ?>
+
+    <form action="ucret-onay-islem.php" method="POST">
+        <input type="hidden" name="servis_id"
+               value="<?= (int)$servis["id"] ?>">
+
+        <input type="hidden" name="csrf_token"
+               value="<?= guvenli($_SESSION["csrf_token"]) ?>">
+
+        <button type="submit" name="karar" value="Onaylandı">
+            Onayla
+        </button>
+
+        <button type="submit" name="karar" value="Reddedildi">
+            Reddet
+        </button>
+    </form>
+
+    <?php elseif ($servis["ucret_onay_durumu"] === "Onaylandı"): ?>
+        <span>Onaylandı</span>
+    <?php elseif ($servis["ucret_onay_durumu"] === "Reddedildi"): ?>
+        <span>Reddedildi</span>
+    <?php else: ?>
+        <span>Teklif Yok</span>
+    <?php endif; ?>
+</td>
+
                         </tr>
                     <?php endwhile; ?>
                 </tbody>

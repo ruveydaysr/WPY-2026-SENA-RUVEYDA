@@ -31,11 +31,11 @@ $parca_ucreti = $_POST["parca_ucreti"] ?? "0";
 $iscilik_ucreti = $_POST["iscilik_ucreti"] ?? "0";
 
 $durum = $_POST["durum"] ?? "";
-
 $gecerli_durumlar = [
     "Bekliyor",
     "İnceleniyor",
     "İşlemde",
+    "Parça Bekliyor",
     "Tamamlandı",
     "Teslim Edildi"
 ];
@@ -56,6 +56,8 @@ foreach ([$parca_ucreti, $iscilik_ucreti] as $ucret) {
 
 $parca_ucreti = (float)$parca_ucreti;
 $iscilik_ucreti = (float)$iscilik_ucreti;
+// Müşteriye sunulacak toplam tahmini ücret
+$tahmini_ucret = round($parca_ucreti + $iscilik_ucreti, 2);
 
 $teknisyen_id = (int) $_SESSION["kullanici_id"];
 
@@ -65,8 +67,9 @@ try {
     // Servisin mevcut bilgilerini getir ve kilitle
     $kontrol = mysqli_prepare(
         $baglanti,
-        "SELECT ariza_tespiti, yapilan_islem, kullanilan_parca,
-                parca_ucreti, iscilik_ucreti, durum
+"SELECT ariza_tespiti, yapilan_islem, kullanilan_parca,
+       parca_ucreti, iscilik_ucreti, durum,
+       tahmini_ucret, ucret_onay_durumu
          FROM servisler
          WHERE id = ? AND teknisyen_id = ?
          FOR UPDATE"
@@ -111,32 +114,56 @@ try {
     if ($eski["durum"] !== $durum) {
         $degisiklikler[] = "Servis durumu değiştirildi.";
     }
+    // İlk ücret teklifi veya ücret değişikliği varsa onay iste
+$eski_tahmini_ucret = $eski["tahmini_ucret"];
 
+$ucret_degisti = (
+    $eski_tahmini_ucret === null ||
+    round((float)$eski_tahmini_ucret, 2) != $tahmini_ucret
+);
+
+if ($ucret_degisti) {
+    $yeni_onay_durumu = "Bekliyor";
+
+    $degisiklikler[] =
+        "Tahmini ücret müşteri onayına sunuldu: " .
+        number_format($tahmini_ucret, 2, ",", ".") . " TL";
+} else {
+    $yeni_onay_durumu = $eski["ucret_onay_durumu"];
+}
     // Servis bilgilerini güncelle
-    $sql = "UPDATE servisler
-            SET ariza_tespiti = ?,
-                yapilan_islem = ?,
-                kullanilan_parca = ?,
-                parca_ucreti = ?,
-                iscilik_ucreti = ?,
-                durum = ?
-            WHERE id = ? AND teknisyen_id = ?";
+$sql = "UPDATE servisler
+        SET ariza_tespiti = ?,
+            yapilan_islem = ?,
+            kullanilan_parca = ?,
+            parca_ucreti = ?,
+            iscilik_ucreti = ?,
+            durum = ?,
+            tahmini_ucret = ?,
+            ucret_onay_durumu = ?,
+            ucret_onay_tarihi =
+                CASE WHEN ? = 1 THEN NULL ELSE ucret_onay_tarihi END
+        WHERE id = ? AND teknisyen_id = ?";
 
     $stmt = mysqli_prepare($baglanti, $sql);
 
-    mysqli_stmt_bind_param(
-        $stmt,
-        "sssddsii",
-        $ariza_tespiti,
-        $yapilan_islem,
-        $kullanilan_parca,
-        $parca_ucreti,
-        $iscilik_ucreti,
-        $durum,
-        $id,
-        $teknisyen_id
-    );
+$onay_sifirlansin = $ucret_degisti ? 1 : 0;
 
+mysqli_stmt_bind_param(
+    $stmt,
+    "sssddsdsiii",
+    $ariza_tespiti,
+    $yapilan_islem,
+    $kullanilan_parca,
+    $parca_ucreti,
+    $iscilik_ucreti,
+    $durum,
+    $tahmini_ucret,
+    $yeni_onay_durumu,
+    $onay_sifirlansin,
+    $id,
+    $teknisyen_id
+);
     if (!mysqli_stmt_execute($stmt)) {
         throw new Exception("Servis güncellenemedi.");
     }

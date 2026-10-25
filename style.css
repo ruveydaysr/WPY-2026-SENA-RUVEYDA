@@ -286,3 +286,33 @@ footer {
         padding: 22px;
     }
 }
+/* Üst menü hizalama düzeltmesi */
+
+header .ust-menu {
+    width: 92%;
+    max-width: 1120px;
+    margin: 0 auto;
+    min-height: 80px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header .ust-menu .logo {
+    font-size: 25px;
+    font-weight: bold;
+    color: #17233d;
+}
+
+header .ust-menu .logo span {
+    color: #365de5;
+}
+
+header .ust-menu nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 25px;
+    margin-left: auto;
+}

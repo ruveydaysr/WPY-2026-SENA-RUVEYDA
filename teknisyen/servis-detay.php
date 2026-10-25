@@ -29,7 +29,10 @@ servisler.ariza_tespiti,
 servisler.yapilan_islem,
 servisler.kullanilan_parca,
 servisler.parca_ucreti,
-servisler.iscilik_ucreti
+servisler.iscilik_ucreti,
+servisler.tahmini_ucret,
+servisler.ucret_onay_durumu,
+servisler.ucret_onay_tarihi
 
           FROM servisler
           INNER JOIN kullanicilar
@@ -116,6 +119,42 @@ $gecmis_sonuc = mysqli_stmt_get_result($gecmis_stmt);
         </p>
     </div>
 
+<div class="cihaz-bilgileri">
+    <h2>Müşteri Ücret Onayı</h2>
+
+    <p>
+        <strong>Tahmini Toplam Ücret:</strong>
+        <?= $servis["tahmini_ucret"] !== null
+            ? number_format((float)$servis["tahmini_ucret"], 2, ",", ".") . " TL"
+            : "Henüz ücret belirlenmedi" ?>
+    </p>
+
+    <p>
+        <strong>Onay Durumu:</strong>
+        <?= htmlspecialchars($servis["ucret_onay_durumu"] ?? "Henüz teklif yok") ?>
+    </p>
+
+    <p>
+        <strong>Onay Tarihi:</strong>
+        <?= htmlspecialchars($servis["ucret_onay_tarihi"] ?? "-") ?>
+    </p>
+</div>
+
+<?php if (in_array($servis["durum"], ["Tamamlandı", "Teslim Edildi"], true)): ?>
+    <div style="margin: 20px 0;">
+        <a href="servis-teslim-fisi.php?id=<?= (int)$servis["id"] ?>"
+           target="_blank"
+           style="display: inline-block;
+                  padding: 12px 20px;
+                  background-color: #2c3e50;
+                  color: white;
+                  text-decoration: none;
+                  border-radius: 5px;">
+            Servis Teslim Fişini Görüntüle
+        </a>
+    </div>
+<?php endif; ?>
+
 <h2>Teknisyen İşlemleri</h2>
 
 <form action="servis-guncelle.php" method="POST">
@@ -142,7 +181,7 @@ $gecmis_sonuc = mysqli_stmt_get_result($gecmis_stmt);
 
     <label>Servis Durumu:</label>
     <select name="durum">
-        <?php foreach (["Bekliyor", "İnceleniyor", "İşlemde", "Tamamlandı", "Teslim Edildi"] as $durum): ?>
+        <?php foreach (["Bekliyor", "İnceleniyor", "İşlemde", "Parça Bekliyor", "Tamamlandı", "Teslim Edildi"] as $durum): ?>
             <option value="<?= htmlspecialchars($durum) ?>"
                 <?= $servis["durum"] === $durum ? "selected" : "" ?>>
                 <?= htmlspecialchars($durum) ?>

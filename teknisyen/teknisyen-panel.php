@@ -89,18 +89,26 @@ if (!$son_servisler) {
 
     <link rel="stylesheet" href="teknisyen-style.css">
 </head>
-
 <body>
 
-    <div class="teknisyen-panel">
+<header class="teknisyen-ust-menu">
+    <a href="teknisyen-panel.php" class="teknisyen-logo">
+        Tekno<span>Servis</span>
+    </a>
+
+    <nav>
+        <a href="teknisyen-panel.php">Panelim</a>
+        <a href="atanan-servisler.php">Atanan Servisler</a>
+        <a href="devam-eden-servisler.php">Devam Edenler</a>
+        <a href="tamamlanan-servisler.php">Tamamlananlar</a>
+        <a href="../cikis.php">Çıkış Yap</a>
+    </nav>
+</header>
+
+<div class="teknisyen-panel">
 
         <h1>Bilgisayar Teknik Servis</h1>
         <h2>Teknisyen Paneli</h2>
-
-
-<a href="../cikis.php" class="cikis-butonu">
-    Çıkış Yap
-</a>
 
         <p>Hoş Geldiniz, Teknisyen</p>
 
