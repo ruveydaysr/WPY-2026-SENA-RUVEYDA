@@ -87,6 +87,12 @@ $gecmis_sonuc = mysqli_stmt_get_result($gecmis_stmt);
 
     <h1>Servis Detayı</h1>
 
+<?php if (isset($_GET["hata"]) && $_GET["hata"] === "ucret_onayi"): ?>
+    <div style="background-color: #ffe5e5; color: #a00000; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        Müşteri ücret teklifini onaylamadan servis tamamlanamaz veya teslim edilemez.
+    </div>
+<?php endif; ?>
+
     <a href="atanan-servisler.php" class="geri-butonu">
         ← Atanan Servislere Dön
     </a>

@@ -12,10 +12,35 @@ if (
     exit("Bu sayfaya erişim yetkiniz yok.");
 }
 
-// Tamamlanan servisleri veritabanından getir
+ // Sayfalama ayarları
+$limit = 5;
+
+$sayfa = filter_input(INPUT_GET, "sayfa", FILTER_VALIDATE_INT);
+$sayfa = ($sayfa && $sayfa > 0) ? $sayfa : 1;
 
 $teknisyen_id = (int) $_SESSION["kullanici_id"];
 
+// Tamamlanan toplam servis sayısını bul
+$sayac = mysqli_prepare(
+    $baglanti,
+    "SELECT COUNT(*)
+     FROM servisler
+     WHERE teknisyen_id = ?
+     AND durum IN ('Tamamlandı', 'Teslim Edildi')"
+);
+
+mysqli_stmt_bind_param($sayac, "i", $teknisyen_id);
+mysqli_stmt_execute($sayac);
+mysqli_stmt_bind_result($sayac, $toplam_servis);
+mysqli_stmt_fetch($sayac);
+mysqli_stmt_close($sayac);
+
+// Toplam sayfa sayısını hesapla
+$toplam_sayfa = max(1, (int) ceil($toplam_servis / $limit));
+$sayfa = min($sayfa, $toplam_sayfa);
+$baslangic = ($sayfa - 1) * $limit;
+
+// Seçilen sayfadaki servisleri getir
 $sql = "SELECT
             servisler.id,
             kullanicilar.adsoyad,
@@ -26,22 +51,31 @@ $sql = "SELECT
             servisler.durum
         FROM servisler
         INNER JOIN kullanicilar
-        ON servisler.kullanici_id = kullanicilar.id
+            ON servisler.kullanici_id = kullanicilar.id
         WHERE servisler.teknisyen_id = ?
         AND servisler.durum IN (
             'Tamamlandı',
             'Teslim Edildi'
         )
-        ORDER BY servisler.id DESC";
+        ORDER BY servisler.id DESC
+        LIMIT ? OFFSET ?";
 
 $stmt = mysqli_prepare($baglanti, $sql);
-mysqli_stmt_bind_param($stmt, "i", $teknisyen_id);
+mysqli_stmt_bind_param(
+    $stmt,
+    "iii",
+    $teknisyen_id,
+    $limit,
+    $baslangic
+);
+
 mysqli_stmt_execute($stmt);
 $sonuc = mysqli_stmt_get_result($stmt);
 
 if (!$sonuc) {
     die("Tamamlanan servis kayıtları alınamadı.");
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -123,6 +157,23 @@ if (!$sonuc) {
     <?php endif; ?>
 </table>
 
+<div style="margin-top: 25px; display: flex; align-items: center; gap: 12px;">
+
+    <?php if ($sayfa > 1): ?>
+        <a href="?sayfa=<?= $sayfa - 1 ?>" class="geri-butonu">
+            Önceki
+        </a>
+    <?php endif; ?>
+
+    <span>Sayfa <?= $sayfa ?> / <?= $toplam_sayfa ?></span>
+
+    <?php if ($sayfa < $toplam_sayfa): ?>
+        <a href="?sayfa=<?= $sayfa + 1 ?>" class="geri-butonu">
+            Sonraki
+        </a>
+    <?php endif; ?>
+
+</div>
 
     </div>
 

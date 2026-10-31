@@ -131,6 +131,15 @@ if ($ucret_degisti) {
 } else {
     $yeni_onay_durumu = $eski["ucret_onay_durumu"];
 }
+// Müşteri onayı olmadan servis tamamlanamaz veya teslim edilemez.
+if (
+    in_array($durum, ["Tamamlandı", "Teslim Edildi"], true) &&
+    $yeni_onay_durumu !== "Onaylandı"
+) {
+    mysqli_rollback($baglanti);
+header("Location: servis-detay.php?id=" . $id . "&hata=ucret_onayi");
+exit();
+}
     // Servis bilgilerini güncelle
 $sql = "UPDATE servisler
         SET ariza_tespiti = ?,
