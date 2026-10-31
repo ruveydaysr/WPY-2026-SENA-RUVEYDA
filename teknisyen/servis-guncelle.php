@@ -17,6 +17,20 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit("Geçersiz istek.");
 }
 
+ // CSRF güvenlik kontrolü
+if (
+    !isset($_SESSION["csrf_token"]) ||
+    !is_string($_POST["csrf_token"] ?? null) ||
+    !hash_equals(
+        $_SESSION["csrf_token"],
+        $_POST["csrf_token"]
+    )
+) {
+    http_response_code(403);
+    exit("Güvenlik doğrulaması başarısız.");
+}
+
+
 $id = filter_input(INPUT_POST, "servis_id", FILTER_VALIDATE_INT);
 
 if (!$id || $id < 1) {

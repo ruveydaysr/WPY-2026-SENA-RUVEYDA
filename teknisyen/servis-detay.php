@@ -1,5 +1,8 @@
 <?php
 session_start();
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
 require_once("../baglanti.php");
 
 if (
@@ -164,6 +167,8 @@ $gecmis_sonuc = mysqli_stmt_get_result($gecmis_stmt);
 <h2>Teknisyen İşlemleri</h2>
 
 <form action="servis-guncelle.php" method="POST">
+    <input type="hidden" name="csrf_token"
+       value="<?= htmlspecialchars($_SESSION["csrf_token"], ENT_QUOTES, 'UTF-8') ?>">
 
     <input type="hidden" name="servis_id"
            value="<?= (int)$servis['id'] ?>">
