@@ -46,7 +46,8 @@ $sql = "SELECT
             ON s.kullanici_id = k.id
         WHERE s.id = ?
           AND s.teknisyen_id = ?
-          AND s.durum IN ('Tamamlandı', 'Teslim Edildi')";
+          AND s.durum IN ('Tamamlandı', 'Teslim Edildi')
+          AND s.ucret_onay_durumu = 'Onaylandı'";
 
 $stmt = mysqli_prepare($baglanti, $sql);
 mysqli_stmt_bind_param(
