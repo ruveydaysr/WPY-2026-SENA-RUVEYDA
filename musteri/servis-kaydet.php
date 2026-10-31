@@ -20,6 +20,7 @@ if (
     exit("Formun süresi dolmuş. Servis oluşturma sayfasını yenileyin.");
 }
 
+$il = trim((string) ($_POST["il"] ?? ""));
 $cihaz = trim((string) ($_POST["cihaz"] ?? ""));
 $marka = trim((string) ($_POST["marka"] ?? ""));
 $model = trim((string) ($_POST["model"] ?? ""));
@@ -32,9 +33,28 @@ $cihazlar = [
     "Diğer"
 ];
 
+$iller = [
+    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray",
+    "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin",
+    "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt",
+    "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur",
+    "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
+    "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan",
+    "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane",
+    "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul",
+    "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars",
+    "Kastamonu", "Kayseri", "Kırıkkale", "Kırklareli", "Kırşehir",
+    "Kilis", "Kocaeli", "Konya", "Kütahya", "Malatya",
+    "Manisa", "Mardin", "Mersin", "Muğla", "Muş",
+    "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize",
+    "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas",
+    "Şanlıurfa", "Şırnak", "Tekirdağ", "Tokat", "Trabzon",
+    "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"
+];
 $mesaj = "";
 
 if (
+    !in_array($il, $iller, true) ||
     !in_array($cihaz, $cihazlar, true) ||
     $marka === "" ||
     $model === "" ||
@@ -53,20 +73,22 @@ if (
 
         $sorgu = mysqli_prepare(
             $baglanti,
-            "INSERT INTO servisler
-             (kullanici_id, cihaz, marka, model, ariza, durum)
-             VALUES (?, ?, ?, ?, ?, 'Bekliyor')"
+        "INSERT INTO servisler
+        (kullanici_id, il, cihaz, marka, model, ariza, durum)
+        VALUES (?, ?, ?, ?, ?, ?, 'Bekliyor')"
+
         );
 
-        mysqli_stmt_bind_param(
-            $sorgu,
-            "issss",
-            $id,
-            $cihaz,
-            $marka,
-            $model,
-            $ariza
-        );
+mysqli_stmt_bind_param(
+    $sorgu,
+    "isssss",
+    $id,
+    $il,
+    $cihaz,
+    $marka,
+    $model,
+    $ariza
+);
 
         mysqli_stmt_execute($sorgu);
         mysqli_stmt_close($sorgu);

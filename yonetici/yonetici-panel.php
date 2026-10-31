@@ -1,4 +1,7 @@
 <?php
+ini_set("display_errors", 1);
+ini_set("display_startup_errors", 1);
+error_reporting(E_ALL);
 session_start();
 
 if (
@@ -56,12 +59,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Yalnızca aktif teknisyenler atanabilir.
         $stmt = mysqli_prepare(
             $baglanti,
-            "UPDATE servisler AS s
-             INNER JOIN kullanicilar AS k ON k.id = ?
-             SET s.teknisyen_id = k.id
-             WHERE s.id = ?
-               AND k.rol IN ('teknisyen', 'teknik')
-               AND k.durum = 'aktif'"
+           
+"UPDATE servisler AS s
+ INNER JOIN kullanicilar AS k ON k.id = ?
+ SET s.teknisyen_id = k.id
+ WHERE s.id = ?
+   AND k.rol IN ('teknisyen', 'teknik')
+   AND k.durum = 'aktif'
+   AND s.il IS NOT NULL
+   AND TRIM(s.il) <> ''
+   AND k.il IS NOT NULL
+   AND TRIM(k.il) <> ''
+   AND TRIM(s.il) = TRIM(k.il)"
+
+
         );
 
         mysqli_stmt_bind_param(
@@ -73,13 +84,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         mysqli_stmt_execute($stmt);
         $degisen = mysqli_stmt_affected_rows($stmt);
+        $zaten_atanmis = false;
+
+if ($degisen === 0) {
+    $kontrol = mysqli_prepare(
+        $baglanti,
+        "SELECT id FROM servisler
+         WHERE id = ? AND teknisyen_id = ?"
+    );
+
+    mysqli_stmt_bind_param($kontrol, "ii", $servis_id, $teknisyen_id);
+    mysqli_stmt_execute($kontrol);
+    mysqli_stmt_store_result($kontrol);
+
+    $zaten_atanmis = mysqli_stmt_num_rows($kontrol) > 0;
+
+    mysqli_stmt_close($kontrol);
+}
         mysqli_stmt_close($stmt);
-
-        $_SESSION["atama_mesaji"] = $degisen > 0
-            ? "Teknisyen ataması kaydedildi."
-            : "Değişiklik yapılmadı. Aynı teknisyen zaten atanmış olabilir; servis ve teknisyen bilgilerini kontrol ediniz.";
-
-        header("Location: yonetici-panel.php");
+if ($degisen > 0) {
+    $_SESSION["atama_mesaji"] = "Teknisyen ataması başarıyla kaydedildi.";
+} elseif ($zaten_atanmis) {
+    $_SESSION["atama_mesaji"] = "Bu servis zaten seçilen teknisyene atanmış.";
+} else {
+    $_SESSION["atama_mesaji"] = "Atama yapılamadı. Servis ile teknisyenin ili aynı olmalı ve teknisyen hesabı aktif olmalıdır.";
+}
+header("Location: yonetici-panel.php");
         exit();
     }
 }
@@ -87,24 +117,52 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 $mesaj = $_SESSION["atama_mesaji"] ?? "";
 unset($_SESSION["atama_mesaji"]);
 
+// Yönetici paneli servis istatistikleri
+$istatistik_sql = "SELECT
+    COUNT(*) AS toplam,
+    SUM(CASE WHEN teknisyen_id IS NULL THEN 1 ELSE 0 END) AS atama_bekleyen,
+    SUM(CASE WHEN durum IN ('İnceleniyor', 'İşlemde', 'Parça Bekliyor')
+        THEN 1 ELSE 0 END) AS devam_eden,
+    SUM(CASE WHEN durum IN ('Tamamlandı', 'Teslim Edildi')
+        THEN 1 ELSE 0 END) AS tamamlanan
+    FROM servisler";
+
+$istatistik_sonuc = mysqli_query($baglanti, $istatistik_sql);
+$istatistik = mysqli_fetch_assoc($istatistik_sonuc);
+
 $teknisyenler = [];
 
 $sonuc = mysqli_query(
     $baglanti,
-    "SELECT id, adsoyad
-     FROM kullanicilar
-     WHERE rol IN ('teknisyen', 'teknik')
-       AND durum = 'aktif'
-     ORDER BY adsoyad"
+   "SELECT id, adsoyad, il
+FROM kullanicilar
+WHERE rol IN ('teknisyen', 'teknik')
+AND durum = 'aktif'
+ORDER BY il, adsoyad"
 );
 
 while ($satir = mysqli_fetch_assoc($sonuc)) {
     $teknisyenler[] = $satir;
 }
+// Sayfalama ayarları
+$sayfa_basina = 5;
 
+$toplam_sonuc = mysqli_query(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam FROM servisler"
+);
+
+$toplam_kayit = (int) mysqli_fetch_assoc($toplam_sonuc)["toplam"];
+
+$toplam_sayfa = max(1, (int) ceil($toplam_kayit / $sayfa_basina));
+
+$sayfa = filter_input(INPUT_GET, "sayfa", FILTER_VALIDATE_INT);
+$sayfa = ($sayfa && $sayfa > 0) ? min($sayfa, $toplam_sayfa) : 1;
+
+$baslangic = ($sayfa - 1) * $sayfa_basina;
 $servisler = mysqli_query(
     $baglanti,
-    "SELECT s.id, s.cihaz, s.marka, s.model,
+    "SELECT s.id, s.il, s.cihaz, s.marka, s.model,
             s.ariza, s.durum, s.tarih, s.teknisyen_id,
             m.adsoyad AS musteri_adi,
             m.telefon AS musteri_telefon,
@@ -112,8 +170,12 @@ $servisler = mysqli_query(
      FROM servisler AS s
      LEFT JOIN kullanicilar AS m ON m.id = s.kullanici_id
      LEFT JOIN kullanicilar AS t ON t.id = s.teknisyen_id
-     ORDER BY s.id DESC"
+     ORDER BY s.id DESC
+LIMIT $baslangic, $sayfa_basina"
 );
+
+$servisListesi = mysqli_fetch_all($servisler, MYSQLI_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -178,25 +240,232 @@ $servisler = mysqli_query(
             background: #ffebee;
             color: #a31818;
         }
+        
+.yonetici-ozet {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 35px;
+}
+
+.ozet-kart {
+    background: #f5f7ff;
+    border: 1px solid #dfe6fa;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 12px rgba(20, 40, 90, 0.05);
+}
+
+.ozet-kart span {
+    display: block;
+    color: #52617d;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.ozet-kart strong {
+    display: block;
+    color: #365de5;
+    font-size: 36px;
+    margin: 8px 0;
+}
+
+.ozet-kart p {
+    margin: 0;
+    color: #64718a;
+    font-size: 13px;
+}
+
+@media (max-width: 950px) {
+    .yonetici-ozet {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 550px) {
+    .yonetici-ozet {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Yönetici servis tablosu düzeni */
+.yonetici-alani .tablo-kapsayici {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e3e8f2;
+    border-radius: 12px;
+}
+
+.yonetici-alani table {
+    width: 100%;
+    min-width: 1250px;
+    border-collapse: collapse;
+}
+
+.yonetici-alani th {
+    background: #eef2ff;
+    color: #17233d;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.yonetici-alani td {
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+.yonetici-alani th,
+.yonetici-alani td {
+    padding: 14px 12px;
+    vertical-align: middle;
+}
+
+.yonetici-alani tbody tr:hover {
+    background: #f5f7ff;
+}
+
+/* İl, durum ve tarih bilgileri bölünmesin */
+.yonetici-alani td:nth-child(2),
+.yonetici-alani td:nth-child(6),
+.yonetici-alani td:nth-child(8) {
+    white-space: nowrap;
+}
+
+/* Atama alanı */
+.atama-formu {
+    min-width: 190px;
+}
+
+.atama-formu button {
+    width: 100%;
+}
+
+/* Servis arama ve filtreleme alanı */
+.servis-filtreleri {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 15px;
+    margin: 22px 0;
+    padding: 20px;
+    background: #f5f7ff;
+    border: 1px solid #dce4ff;
+    border-radius: 12px;
+}
+
+.servis-filtreleri input,
+.servis-filtreleri select {
+    width: 100%;
+    height: 46px;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid #d4dff2;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.servis-filtreleri input:focus,
+.servis-filtreleri select:focus {
+    outline: 2px solid #365de5;
+    outline-offset: 2px;
+}
+
+@media (max-width: 750px) {
+    .servis-filtreleri {
+        grid-template-columns: 1fr;
+    }
+}
+
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Bilgisayar Teknik Servis</h1>
-
-    <nav>
-        <a href="yonetici-panel.php">Yönetici Paneli</a>
-        <a href="../cikis.php"
-           onclick="return confirm('Çıkış yapmak istediğinize emin misiniz?');">
-            Çıkış Yap
+    <div class="ust-menu">
+        <a href="/teknik-servis/index.php" class="logo">
+            Tekno<span>Servis</span>
         </a>
-    </nav>
+
+        <nav aria-label="Yönetici menüsü">
+            <a href="/teknik-servis/yonetici/yonetici-panel.php"
+               aria-current="page">
+                Yönetici Paneli
+            </a>
+
+            <a href="/teknik-servis/cikis.php"
+               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
+                Çıkış Yap
+            </a>
+        </nav>
+    </div>
 </header>
 
 <main>
     <section class="yonetici-alani">
+        
+<div class="yonetici-ozet">
+    <div class="ozet-kart">
+        <span>Toplam Servis</span>
+        <strong><?= (int)$istatistik["toplam"] ?></strong>
+        <p>Sistemdeki tüm servis kayıtları</p>
+    </div>
+
+    <div class="ozet-kart">
+        <span>Atama Bekleyen</span>
+        <strong><?= (int)$istatistik["atama_bekleyen"] ?></strong>
+        <p>Henüz teknisyen atanmayanlar</p>
+    </div>
+
+    <div class="ozet-kart">
+        <span>Devam Eden</span>
+        <strong><?= (int)$istatistik["devam_eden"] ?></strong>
+        <p>İnceleme ve onarım aşamasında</p>
+    </div>
+
+    <div class="ozet-kart">
+        <span>Tamamlanan</span>
+        <strong><?= (int)$istatistik["tamamlanan"] ?></strong>
+        <p>Tamamlanan ve teslim edilenler</p>
+    </div>
+</div>
+
         <h2>Müşteri Talepleri ve Teknisyen Atama</h2>
+
+<div class="servis-filtreleri">
+    <input type="number" id="servisAra"
+           placeholder="Servis numarası ara..." min="1">
+
+    <select id="ilFiltre">
+        <option value="">Tüm İller</option>
+        <?php
+        $iller = [];
+        foreach ($servisListesi as $kayit) {
+            if (!empty($kayit["il"])) {
+                $iller[] = $kayit["il"];
+            }
+        }
+        $iller = array_unique($iller);
+        sort($iller);
+
+        foreach ($iller as $il):
+        ?>
+            <option value="<?= guvenli($il) ?>">
+                <?= guvenli($il) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
+    <select id="durumFiltre">
+        <option value="">Tüm Durumlar</option>
+        <option value="Bekliyor">Bekliyor</option>
+        <option value="İnceleniyor">İnceleniyor</option>
+        <option value="İşlemde">İşlemde</option>
+        <option value="Parça Bekliyor">Parça Bekliyor</option>
+        <option value="Tamamlandı">Tamamlandı</option>
+        <option value="Teslim Edildi">Teslim Edildi</option>
+    </select>
+</div>
 
         <?php if ($mesaj !== "") { ?>
             <p class="bilgi"><?= guvenli($mesaj) ?></p>
@@ -219,6 +488,7 @@ $servisler = mysqli_query(
                 <thead>
                     <tr>
                         <th>Servis No</th>
+                        <th>İl</th>
                         <th>Müşteri</th>
                         <th>Telefon</th>
                         <th>Cihaz</th>
@@ -233,13 +503,13 @@ $servisler = mysqli_query(
                 <tbody>
                 <?php if (mysqli_num_rows($servisler) === 0) { ?>
                     <tr>
-                        <td colspan="9">Henüz servis talebi yok.</td>
+                        <td colspan="10">Henüz servis talebi yok.</td>
                     </tr>
                 <?php } ?>
-
-                <?php while ($servis = mysqli_fetch_assoc($servisler)) { ?>
+                <?php foreach ($servisListesi as $servis) { ?>
                     <tr>
                         <td><?= (int) $servis["id"] ?></td>
+                        <td><?= guvenli($servis["il"] ?? "Belirtilmedi") ?></td>
                         <td><?= guvenli($servis["musteri_adi"]) ?></td>
                         <td><?= guvenli($servis["musteri_telefon"]) ?></td>
 
@@ -260,7 +530,22 @@ $servisler = mysqli_query(
                         </td>
 
                         <td>
-                            <?php if (!empty($teknisyenler)) { ?>
+                            
+<?php
+$uygunTeknisyenler = array_filter(
+    $teknisyenler,
+    function ($teknisyen) use ($servis) {
+        $teknisyenIl = trim((string) ($teknisyen["il"] ?? ""));
+        $servisIl = trim((string) ($servis["il"] ?? ""));
+
+        return $servisIl !== ""
+            && $teknisyenIl !== ""
+            && $teknisyenIl === $servisIl;
+    }
+);
+?>
+
+                          <?php if (!empty($uygunTeknisyenler)) { ?>
                                 <form method="POST" class="atama-formu">
                                     <input
                                         type="hidden"
@@ -281,7 +566,15 @@ $servisler = mysqli_query(
                                     >
                                         <option value="">Teknisyen seçiniz</option>
 
-                                        <?php foreach ($teknisyenler as $teknisyen) { ?>
+                                        
+<?php foreach ($teknisyenler as $teknisyen) {
+    if (
+        trim((string) ($teknisyen["il"] ?? "")) !==
+        trim((string) ($servis["il"] ?? ""))
+    ) {
+        continue;
+    }
+?>
                                             <option
                                                 value="<?= (int) $teknisyen["id"] ?>"
                                                 <?= (int) $servis["teknisyen_id"] === (int) $teknisyen["id"] ? "selected" : "" ?>
@@ -294,16 +587,64 @@ $servisler = mysqli_query(
                                     <button type="submit">Atamayı Kaydet</button>
                                 </form>
                             <?php } else { ?>
-                                Aktif teknisyen yok.
+                                Bu ilde uygun teknisyen bulunamadı.
                             <?php } ?>
                         </td>
                     </tr>
                 <?php } ?>
                 </tbody>
             </table>
+            <?php if ($toplam_sayfa > 1): ?>
+    <div style="display:flex; justify-content:center; gap:10px; margin:25px 0;">
+        <?php for ($i = 1; $i <= $toplam_sayfa; $i++): ?>
+            <a href="?sayfa=<?= $i ?>"
+               style="padding:10px 15px; background:<?= $i == $sayfa ? '#3659e3' : '#eef2ff' ?>; color:<?= $i == $sayfa ? 'white' : '#243b75' ?>; border-radius:7px; text-decoration:none;">
+                <?= $i ?>
+            </a>
+        <?php endfor; ?>
+    </div>
+<?php endif; ?>
         </div>
     </section>
 </main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const servisAra = document.getElementById("servisAra");
+    const ilFiltre = document.getElementById("ilFiltre");
+    const durumFiltre = document.getElementById("durumFiltre");
+
+    const tablo = document.querySelector(".tablo-kapsayici table");
+    const satirlar = tablo.querySelectorAll("tbody tr");
+
+    function filtrele() {
+        const arananNo = servisAra.value.trim();
+        const secilenIl = ilFiltre.value.trim().toLocaleLowerCase("tr-TR");
+        const secilenDurum = durumFiltre.value.trim().toLocaleLowerCase("tr-TR");
+
+        satirlar.forEach(function (satir) {
+            const hucreler = satir.querySelectorAll("td");
+
+            if (hucreler.length < 7) return;
+
+            const servisNo = hucreler[0].textContent.trim();
+            const il = hucreler[1].textContent.trim().toLocaleLowerCase("tr-TR");
+            const durum = hucreler[6].textContent.trim().toLocaleLowerCase("tr-TR");
+
+            const noUygun = arananNo === "" || servisNo === arananNo;
+            const ilUygun = secilenIl === "" || il === secilenIl;
+            const durumUygun = secilenDurum === "" || durum === secilenDurum;
+
+            satir.style.display =
+                noUygun && ilUygun && durumUygun ? "" : "none";
+        });
+    }
+
+    servisAra.addEventListener("input", filtrele);
+    ilFiltre.addEventListener("change", filtrele);
+    durumFiltre.addEventListener("change", filtrele);
+});
+</script>
 
 </body>
 </html>

@@ -316,3 +316,145 @@ header .ust-menu nav {
     gap: 25px;
     margin-left: auto;
 }
+
+/* Hakkımızda Bölümü */
+.hakkimizda-bolumu {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    align-items: center;
+    gap: 45px;
+    margin-top: 65px;
+    padding: 45px;
+    background: white;
+    border: 1px solid #e3e8f2;
+    border-radius: 18px;
+}
+
+.bolum-etiketi {
+    color: #365de5;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.hakkimizda-icerik h2 {
+    font-size: 30px;
+    margin: 15px 0;
+}
+
+.hakkimizda-icerik p {
+    color: #64718a;
+    line-height: 1.8;
+}
+
+.hakkimizda-ozellikler {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 25px;
+    color: #17233d;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.hakkimizda-gorsel {
+    background: linear-gradient(135deg, #365de5, #17233d);
+    color: white;
+    padding: 65px 25px;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.gorsel-simge {
+    font-size: 75px;
+}
+
+.hakkimizda-gorsel h3 {
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.hakkimizda-gorsel p {
+    color: #e0e7ff;
+}
+
+@media (max-width: 750px) {
+    .hakkimizda-bolumu {
+        grid-template-columns: 1fr;
+        padding: 25px;
+        gap: 25px;
+    }
+
+    .hakkimizda-icerik h2 {
+        font-size: 25px;
+    }
+
+    .hakkimizda-ozellikler {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Hizmetlerimiz */
+.hizmetler-bolumu {
+    margin-top: 65px;
+}
+
+.bolum-baslik {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.bolum-baslik h2 {
+    font-size: 32px;
+    margin: 10px 0;
+}
+
+.bolum-baslik p {
+    color: #64718a;
+}
+
+.hizmet-kartlari {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+}
+
+.hizmet-kart {
+    background: white;
+    padding: 30px;
+    border: 1px solid #e3e8f2;
+    border-radius: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hizmet-kart:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(23, 35, 61, 0.1);
+}
+
+.hizmet-ikon {
+    font-size: 38px;
+    margin-bottom: 15px;
+}
+
+.hizmet-kart h3 {
+    margin: 0 0 12px;
+    font-size: 19px;
+}
+
+.hizmet-kart p {
+    color: #64718a;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .hizmet-kartlari {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .hizmet-kartlari {
+        grid-template-columns: 1fr;
+    }
+}
