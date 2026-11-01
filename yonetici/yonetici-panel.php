@@ -864,7 +864,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const hucreler = satir.querySelectorAll("td");
 
-            if (hucreler.length < 12) return;
+            if (hucreler.length < 13) return;
 
             const servisNo = hucreler[0].textContent.trim();
 
