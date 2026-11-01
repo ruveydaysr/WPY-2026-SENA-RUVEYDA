@@ -1,3 +1,4 @@
+
 <?php
 require_once(__DIR__ . "/../yetki-kontrol.php");
 yetkiKontrol(["musteri"]);
@@ -5,10 +6,14 @@ yetkiKontrol(["musteri"]);
 require_once(__DIR__ . "/../baglanti.php");
 mysqli_set_charset($baglanti, "utf8mb4");
 
-// Aktif servis noktalarını getir
+if (empty($_SESSION["csrf"])) {
+    $_SESSION["csrf"] = bin2hex(random_bytes(32));
+}
+
+// Aktif servis şubelerini veritabanından getir
 $subeler = [];
 
-$subeSorgu = mysqli_query(
+$sonuc = mysqli_query(
     $baglanti,
     "SELECT id, il, ilce, sube_adi
      FROM servis_noktalari
@@ -16,18 +21,17 @@ $subeSorgu = mysqli_query(
      ORDER BY il, ilce, sube_adi"
 );
 
-if (!$subeSorgu) {
+if (!$sonuc) {
     http_response_code(500);
     exit("Servis noktaları yüklenemedi.");
 }
 
-while ($satir = mysqli_fetch_assoc($subeSorgu)) {
+while ($satir = mysqli_fetch_assoc($sonuc)) {
     $subeler[] = $satir;
 }
 
-if (empty($_SESSION["csrf"])) {
-    $_SESSION["csrf"] = bin2hex(random_bytes(32));
-}
+// Yalnızca aktif şubesi bulunan iller
+$iller = array_unique(array_column($subeler, "il"));
 ?>
 
 <!DOCTYPE html>
@@ -35,8 +39,11 @@ if (empty($_SESSION["csrf"])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Servis Oluştur | TeknoServis</title>
-    <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
+
+    <link rel="stylesheet"
+          href="/teknik-servis/style.css?v=4">
 </head>
 <body>
 
@@ -50,16 +57,20 @@ if (empty($_SESSION["csrf"])) {
             <a href="/teknik-servis/musteri/musteri-panel.php">
                 Panelim
             </a>
+
             <a href="/teknik-servis/musteri/servis-olustur.php"
                aria-current="page">
                 Servis Oluştur
             </a>
+
             <a href="/teknik-servis/musteri/servis-takip.php">
                 Servis Takip
             </a>
+
             <a href="/teknik-servis/musteri/profil.php">
                 Profilim
             </a>
+
             <a href="/teknik-servis/musteri/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
                 Çıkış Yap
@@ -70,52 +81,114 @@ if (empty($_SESSION["csrf"])) {
 
 <main>
     <section class="form-alani">
+
         <h1>Servis Oluştur</h1>
 
         <p class="aciklama">
-            Cihaz bilgilerinizi ve yaşadığınız sorunu yazın.
+            İhtiyacınıza uygun hizmet türünü seçerek
+            teknik servis talebi oluşturabilirsiniz.
         </p>
 
         <form action="/teknik-servis/musteri/servis-kaydet.php"
               method="POST">
 
-            <input type="hidden" name="csrf"
-                   value="<?= htmlspecialchars($_SESSION["csrf"], ENT_QUOTES, "UTF-8") ?>">
+            <input type="hidden"
+                   name="csrf"
+                   value="<?= htmlspecialchars(
+                       $_SESSION["csrf"],
+                       ENT_QUOTES,
+                       "UTF-8"
+                   ) ?>">
 
-<label for="il">Servis Hizmeti Alınacak İl</label>
-<select id="il" name="il" required>
-    <option value="">İl seçiniz</option>
+            <!-- HİZMET TÜRÜ -->
 
-    <?php
-    $aktifIller = array_unique(
-        array_column($subeler, "il")
-    );
+            <label for="hizmet_turu">
+                Hizmet Türü
+            </label>
 
-    foreach ($aktifIller as $il):
-    ?>
-        <option value="<?= htmlspecialchars($il, ENT_QUOTES, 'UTF-8') ?>">
-            <?= htmlspecialchars($il, ENT_QUOTES, 'UTF-8') ?>
-        </option>
-    <?php endforeach; ?>
-</select>
+            <select id="hizmet_turu"
+                    name="hizmet_turu"
+                    required>
 
-<label for="servis_noktasi_id">
-    Bilgisayarınızı Teslim Edeceğiniz Şube
-</label>
+                <option value="">
+                    Hizmet türünü seçiniz
+                </option>
 
-<select id="servis_noktasi_id"
-        name="servis_noktasi_id"
-        required disabled>
-    <option value="">Önce il seçiniz</option>
-</select>
+                <option value="Online">
+                    Online Teknik Destek
+                </option>
 
-<p class="aciklama">
-    Bilgisayarınızı seçtiğiniz şubeye fiziksel olarak
-    teslim etmeniz gerekmektedir.
-</p>
+                <option value="Elden Teslim">
+                    Şubeden Teknik Servis (Elden Teslim)
+                </option>
 
+            </select>
 
-            <label for="cihaz">Cihaz Türü</label>
+            <p class="aciklama" id="hizmet_aciklama">
+                Devam etmek için hizmet türünü seçiniz.
+            </p>
+
+            <!-- ELDEN TESLİM ALANI -->
+
+            <div id="sube_alani" hidden>
+
+                <label for="il">
+                    Servis Hizmeti Alınacak İl
+                </label>
+
+                <select id="il"
+                        name="il"
+                        disabled>
+
+                    <option value="">
+                        İl seçiniz
+                    </option>
+
+                    <?php foreach ($iller as $il): ?>
+
+                        <option value="<?= htmlspecialchars(
+                            $il,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        ) ?>">
+                            <?= htmlspecialchars(
+                                $il,
+                                ENT_QUOTES,
+                                "UTF-8"
+                            ) ?>
+                        </option>
+
+                    <?php endforeach; ?>
+
+                </select>
+
+                <label for="servis_noktasi_id">
+                    Bilgisayarınızı Teslim Edeceğiniz Şube
+                </label>
+
+                <select id="servis_noktasi_id"
+                        name="servis_noktasi_id"
+                        disabled>
+
+                    <option value="">
+                        Önce il seçiniz
+                    </option>
+
+                </select>
+
+                <p class="aciklama">
+                    Cihazınızı seçtiğiniz şubeye fiziksel
+                    olarak teslim etmeniz gerekmektedir.
+                </p>
+
+            </div>
+
+            <!-- CİHAZ BİLGİLERİ -->
+
+            <label for="cihaz">
+                Cihaz Türü
+            </label>
+
             <select id="cihaz" name="cihaz" required>
                 <option value="">Cihaz seçin</option>
                 <option>Masaüstü Bilgisayar</option>
@@ -124,24 +197,47 @@ if (empty($_SESSION["csrf"])) {
                 <option>Diğer</option>
             </select>
 
-            <label for="marka">Marka</label>
-            <input type="text" id="marka" name="marka"
-                   maxlength="50" required>
+            <label for="marka">
+                Marka
+            </label>
 
-            <label for="model">Model</label>
-            <input type="text" id="model" name="model"
-                   maxlength="50" required>
+            <input type="text"
+                   id="marka"
+                   name="marka"
+                   maxlength="50"
+                   required>
 
-            <label for="ariza">Arıza Açıklaması</label>
-            <textarea id="ariza" name="ariza" rows="5"
-                      maxlength="1000" required></textarea>
+            <label for="model">
+                Model
+            </label>
 
-            <button type="submit">Servis Kaydı Oluştur</button>
+            <input type="text"
+                   id="model"
+                   name="model"
+                   maxlength="50"
+                   required>
+
+            <label for="ariza">
+                Arıza Açıklaması
+            </label>
+
+            <textarea id="ariza"
+                      name="ariza"
+                      rows="5"
+                      maxlength="1000"
+                      required></textarea>
+
+            <button type="submit">
+                Servis Kaydı Oluştur
+            </button>
+
         </form>
+
     </section>
 </main>
 
 <script>
+// PHP'den aktif şubeleri JavaScript'e aktar
 const subeler = <?= json_encode(
     $subeler,
     JSON_UNESCAPED_UNICODE |
@@ -151,10 +247,64 @@ const subeler = <?= json_encode(
     JSON_HEX_QUOT
 ) ?>;
 
+const hizmetSecimi = document.getElementById("hizmet_turu");
+const hizmetAciklama = document.getElementById("hizmet_aciklama");
+
+const subeAlani = document.getElementById("sube_alani");
 const ilSecimi = document.getElementById("il");
 const subeSecimi = document.getElementById("servis_noktasi_id");
 
+// Hizmet türü seçilince alanları değiştir
+hizmetSecimi.addEventListener("change", function () {
+
+    const hizmet = this.value;
+
+    if (hizmet === "Elden Teslim") {
+
+        subeAlani.hidden = false;
+
+        ilSecimi.disabled = false;
+        ilSecimi.required = true;
+
+        subeSecimi.required = true;
+
+        hizmetAciklama.textContent =
+            "Cihazınızı seçtiğiniz servis şubesine " +
+            "teslim ederek teknik destek alabilirsiniz.";
+
+    } else {
+
+        subeAlani.hidden = true;
+
+        ilSecimi.value = "";
+        ilSecimi.disabled = true;
+        ilSecimi.required = false;
+
+        subeSecimi.innerHTML =
+            '<option value="">Önce il seçiniz</option>';
+
+        subeSecimi.disabled = true;
+        subeSecimi.required = false;
+
+        if (hizmet === "Online") {
+
+            hizmetAciklama.textContent =
+                "Cihazınızı şubeye götürmeden uzaktan " +
+                "teknik destek talebi oluşturabilirsiniz. " +
+                "Gerekirse teknisyen sizi şubeye yönlendirebilir.";
+
+        } else {
+
+            hizmetAciklama.textContent =
+                "Devam etmek için hizmet türünü seçiniz.";
+
+        }
+    }
+});
+
+// İl seçilince ilgili şubeleri göster
 ilSecimi.addEventListener("change", function () {
+
     const secilenIl = this.value;
 
     subeSecimi.innerHTML = "";
@@ -163,6 +313,7 @@ ilSecimi.addEventListener("change", function () {
     const ilkSecenek = document.createElement("option");
     ilkSecenek.value = "";
     ilkSecenek.textContent = "Şube seçiniz";
+
     subeSecimi.appendChild(ilkSecenek);
 
     if (!secilenIl) {
@@ -170,11 +321,12 @@ ilSecimi.addEventListener("change", function () {
         return;
     }
 
-    const uygunSubeler = subeler.filter(
-        sube => sube.il === secilenIl
-    );
+    const uygunSubeler = subeler.filter(function(sube) {
+        return sube.il === secilenIl;
+    });
 
-    uygunSubeler.forEach(function (sube) {
+    uygunSubeler.forEach(function(sube) {
+
         const secenek = document.createElement("option");
 
         secenek.value = sube.id;
