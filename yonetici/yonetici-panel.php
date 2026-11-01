@@ -16,6 +16,21 @@ require_once("../baglanti.php");
 
 mysqli_set_charset($baglanti, "utf8mb4");
 
+// Okunmamış iletişim mesajlarının sayısı
+$yeniMesajSorgu = mysqli_query(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam
+     FROM iletisim_mesajlari
+     WHERE durum = 'Yeni'"
+);
+
+$yeniMesajSayisi = 0;
+
+if ($yeniMesajSorgu) {
+    $yeniMesajVeri = mysqli_fetch_assoc($yeniMesajSorgu);
+    $yeniMesajSayisi = (int)$yeniMesajVeri["toplam"];
+}
+
 function guvenli($deger) {
     return htmlspecialchars(
         (string) $deger,
@@ -428,6 +443,30 @@ $servisListesi = mysqli_fetch_all($servisler, MYSQLI_ASSOC);
         <strong><?= (int)$istatistik["tamamlanan"] ?></strong>
         <p>Tamamlanan ve teslim edilenler</p>
     </div>
+</div>
+
+<!-- Gelen Mesajlar Bölümü -->
+<div class="yonetici-mesaj-alani">
+    <div>
+        <h2>📩 Gelen Mesajlar</h2>
+        
+<p class="yeni-mesaj-sayaci">
+    <?php if ($yeniMesajSayisi > 0): ?>
+        🔔 <?= $yeniMesajSayisi ?> yeni mesajınız var.
+    <?php else: ?>
+        ✓ Yeni mesajınız bulunmuyor.
+    <?php endif; ?>
+</p>
+
+        <p>
+            Müşterilerin iletişim ve destek formundan
+            gönderdiği mesajları buradan yönetebilirsiniz.
+        </p>
+    </div>
+
+    <a href="gelen-mesajlar.php" class="mesajlar-buton">
+        Mesajları Görüntüle
+    </a>
 </div>
 
         <h2>Müşteri Talepleri ve Teknisyen Atama</h2>

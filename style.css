@@ -867,3 +867,72 @@ header .ust-menu nav {
         padding: 25px;
     }
 }
+
+/* Yönetici Paneli - Gelen Mesajlar */
+
+.yonetici-mesaj-alani {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 25px;
+    background: #ffffff;
+    border: 1px solid #e0e6f0;
+    border-left: 5px solid #365de5;
+    border-radius: 14px;
+    padding: 25px 30px;
+    margin: 30px 0;
+    box-shadow: 0 4px 15px rgba(20, 40, 80, 0.05);
+}
+
+.yonetici-mesaj-alani h2 {
+    color: #17233d;
+    font-size: 22px;
+    margin: 0 0 10px;
+}
+
+.yonetici-mesaj-alani p {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.mesajlar-buton {
+    display: inline-block;
+    background: #365de5;
+    color: #ffffff;
+    padding: 13px 22px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.mesajlar-buton:hover {
+    background: #2447b2;
+    color: #ffffff;
+}
+
+@media (max-width: 700px) {
+    .yonetici-mesaj-alani {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 22px;
+    }
+
+    .mesajlar-buton {
+        white-space: normal;
+    }
+}
+
+/* Yönetici paneli yeni mesaj sayacı */
+.yonetici-mesaj-alani .yeni-mesaj-sayaci {
+    display: inline-block;
+    background: #e8efff;
+    color: #2447b2;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 5px 0 12px;
+}
