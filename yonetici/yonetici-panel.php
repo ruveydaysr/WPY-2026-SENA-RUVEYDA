@@ -469,6 +469,21 @@ $servisListesi = mysqli_fetch_all($servisler, MYSQLI_ASSOC);
     </a>
 </div>
 
+<!-- Servis Noktası Yönetimi -->
+<div class="yonetici-mesaj-alani">
+    <div>
+        <h2>📍 Servis Noktası Yönetimi</h2>
+        <p>
+            Hizmet verilen illerdeki şubeleri ekleyin,
+            adreslerini görüntüleyin ve aktif/pasif durumlarını yönetin.
+        </p>
+    </div>
+
+    <a href="servis-noktasi-yonetimi.php" class="mesajlar-buton">
+        Şubeleri Yönet
+    </a>
+</div>
+
         <h2>Müşteri Talepleri ve Teknisyen Atama</h2>
 
 <div class="servis-filtreleri">

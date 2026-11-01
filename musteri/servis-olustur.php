@@ -2,6 +2,29 @@
 require_once(__DIR__ . "/../yetki-kontrol.php");
 yetkiKontrol(["musteri"]);
 
+require_once(__DIR__ . "/../baglanti.php");
+mysqli_set_charset($baglanti, "utf8mb4");
+
+// Aktif servis noktalarını getir
+$subeler = [];
+
+$subeSorgu = mysqli_query(
+    $baglanti,
+    "SELECT id, il, ilce, sube_adi
+     FROM servis_noktalari
+     WHERE durum = 'Aktif'
+     ORDER BY il, ilce, sube_adi"
+);
+
+if (!$subeSorgu) {
+    http_response_code(500);
+    exit("Servis noktaları yüklenemedi.");
+}
+
+while ($satir = mysqli_fetch_assoc($subeSorgu)) {
+    $subeler[] = $satir;
+}
+
 if (empty($_SESSION["csrf"])) {
     $_SESSION["csrf"] = bin2hex(random_bytes(32));
 }
@@ -62,33 +85,35 @@ if (empty($_SESSION["csrf"])) {
 <label for="il">Servis Hizmeti Alınacak İl</label>
 <select id="il" name="il" required>
     <option value="">İl seçiniz</option>
-    <?php
-    $iller = [
-        "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray",
-        "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin",
-        "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt",
-        "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur",
-        "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
-        "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan",
-        "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane",
-        "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul",
-        "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars",
-        "Kastamonu", "Kayseri", "Kırıkkale", "Kırklareli", "Kırşehir",
-        "Kilis", "Kocaeli", "Konya", "Kütahya", "Malatya",
-        "Manisa", "Mardin", "Mersin", "Muğla", "Muş",
-        "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize",
-        "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas",
-        "Şanlıurfa", "Şırnak", "Tekirdağ", "Tokat", "Trabzon",
-        "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"
-    ];
 
-    foreach ($iller as $il) {
-        echo '<option value="' . htmlspecialchars($il, ENT_QUOTES, 'UTF-8') . '">'
-            . htmlspecialchars($il, ENT_QUOTES, 'UTF-8')
-            . '</option>';
-    }
+    <?php
+    $aktifIller = array_unique(
+        array_column($subeler, "il")
+    );
+
+    foreach ($aktifIller as $il):
     ?>
+        <option value="<?= htmlspecialchars($il, ENT_QUOTES, 'UTF-8') ?>">
+            <?= htmlspecialchars($il, ENT_QUOTES, 'UTF-8') ?>
+        </option>
+    <?php endforeach; ?>
 </select>
+
+<label for="servis_noktasi_id">
+    Bilgisayarınızı Teslim Edeceğiniz Şube
+</label>
+
+<select id="servis_noktasi_id"
+        name="servis_noktasi_id"
+        required disabled>
+    <option value="">Önce il seçiniz</option>
+</select>
+
+<p class="aciklama">
+    Bilgisayarınızı seçtiğiniz şubeye fiziksel olarak
+    teslim etmeniz gerekmektedir.
+</p>
+
 
             <label for="cihaz">Cihaz Türü</label>
             <select id="cihaz" name="cihaz" required>
@@ -115,6 +140,53 @@ if (empty($_SESSION["csrf"])) {
         </form>
     </section>
 </main>
+
+<script>
+const subeler = <?= json_encode(
+    $subeler,
+    JSON_UNESCAPED_UNICODE |
+    JSON_HEX_TAG |
+    JSON_HEX_AMP |
+    JSON_HEX_APOS |
+    JSON_HEX_QUOT
+) ?>;
+
+const ilSecimi = document.getElementById("il");
+const subeSecimi = document.getElementById("servis_noktasi_id");
+
+ilSecimi.addEventListener("change", function () {
+    const secilenIl = this.value;
+
+    subeSecimi.innerHTML = "";
+    subeSecimi.disabled = true;
+
+    const ilkSecenek = document.createElement("option");
+    ilkSecenek.value = "";
+    ilkSecenek.textContent = "Şube seçiniz";
+    subeSecimi.appendChild(ilkSecenek);
+
+    if (!secilenIl) {
+        ilkSecenek.textContent = "Önce il seçiniz";
+        return;
+    }
+
+    const uygunSubeler = subeler.filter(
+        sube => sube.il === secilenIl
+    );
+
+    uygunSubeler.forEach(function (sube) {
+        const secenek = document.createElement("option");
+
+        secenek.value = sube.id;
+        secenek.textContent =
+            sube.sube_adi + " - " + sube.ilce;
+
+        subeSecimi.appendChild(secenek);
+    });
+
+    subeSecimi.disabled = uygunSubeler.length === 0;
+});
+</script>
 
 </body>
 </html>

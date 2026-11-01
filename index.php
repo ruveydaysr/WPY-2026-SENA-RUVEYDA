@@ -24,7 +24,7 @@ session_start();
 
     <div class="alt-menu">
         <a href="#hakkimizda">Hakkımızda</a>
-        <a href="#bolgelerimiz">Bölgelerimiz</a>
+        <a href="servis-noktalari.php">Bölgelerimiz</a>
         <a href="#iletisim">İletişim</a>
     </div>
 </div>
@@ -325,7 +325,7 @@ session_start();
             <a href="index.php">Ana Sayfa</a>
             
             <a href="#hizmetlerimiz">Hizmetlerimiz</a>
-            <a href="#bolgelerimiz">Bölgelerimiz</a>
+            <a href="servis-noktalari.php">Bölgelerimiz</a>
             <a href="#iletisim">İletişim</a>
         </div>
 

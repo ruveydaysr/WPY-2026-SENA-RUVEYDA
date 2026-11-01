@@ -34,13 +34,15 @@ if ($email === "" || $sifre === "") {
         mysqli_stmt_close($sorgu);
 
         if ($bulundu && password_verify($sifre, $kayitli_sifre)) {
-            $sayfalar = [
-                "musteri"   => "musteri/musteri-panel.php",
-                "root"     => "root/root-panel.php",
-                "mudur"    => "mudurluk/mudur-panel.php",
-                "teknisyen" => "teknisyen/teknisyen-panel.php",
-                "teknik"   => "teknisyen/teknisyen-panel.php"
-            ];
+           
+$sayfalar = [
+    "musteri"   => "musteri/musteri-panel.php",
+    "root"      => "root/root-panel.php",
+    "mudur"     => "mudurluk/mudur-panel.php",
+    "yonetici"  => "yonetici/yonetici-panel.php",
+    "teknisyen" => "teknisyen/teknisyen-panel.php",
+    "teknik"    => "teknisyen/teknisyen-panel.php"
+];
 
             if ($durum !== "aktif") {
                 $mesaj = "Hesabınız aktif değil.";
@@ -74,14 +76,16 @@ if ($email === "" || $sifre === "") {
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
-
 <header>
     <div class="ust-menu">
-        <a href="index.php" class="logo">Tekno<span>Servis</span></a>
+        <a href="index.php" class="logo">
+            Tekno<span>Servis</span>
+        </a>
 
-        <nav aria-label="Ana menü">
+        <nav>
             <a href="index.php">Ana Sayfa</a>
             <a href="kayit.php">Kayıt Ol</a>
+            <a href="giris.php">Giriş Yap</a>
         </nav>
     </div>
 </header>
