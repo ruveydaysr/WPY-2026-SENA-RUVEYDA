@@ -53,31 +53,7 @@ $sayaclar = [
     <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
 </head>
 <body>
-
-<header>
-    <div class="ust-menu">
-        <a href="/teknik-servis/index.php" class="logo">
-            Tekno<span>Servis</span>
-        </a>
-
-        <nav aria-label="Müşteri menüsü">
-            <a href="/teknik-servis/musteri/musteri-panel.php"
-               aria-current="page">Panelim</a>
-            <a href="/teknik-servis/musteri/servis-olustur.php">
-                Servis Oluştur
-            </a>
-            <a href="/teknik-servis/musteri/servis-takip.php">
-                Servis Takip
-            </a>
-            <a href="/teknik-servis/musteri/profil.php">Profilim</a>
-            <a href="/teknik-servis/musteri/cikis.php"
-               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
-                Çıkış Yap
-            </a>
-        </nav>
-    </div>
-</header>
-
+<?php require_once(__DIR__ . "/../ortak-menu.php"); ?>
 <main>
     <h1>
         Hoş geldiniz,

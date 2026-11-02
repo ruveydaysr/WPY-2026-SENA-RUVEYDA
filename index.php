@@ -1,7 +1,36 @@
 
 <?php
 session_start();
+
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
+
+require_once(__DIR__ . "/baglanti.php");
+mysqli_set_charset($baglanti, "utf8mb4");
+
+$onayliYorumlar = [];
+
+$yorumSonuc = mysqli_query(
+    $baglanti,
+    "SELECT
+        y.puan,
+        y.yorum,
+        y.tarih,
+        k.adsoyad
+     FROM musteri_yorumlari AS y
+     INNER JOIN kullanicilar AS k
+        ON k.id = y.kullanici_id
+     WHERE y.durum = 'Onaylandı'
+     ORDER BY y.tarih DESC, y.id DESC
+     LIMIT 6"
+);
+
+while ($satir = mysqli_fetch_assoc($yorumSonuc)) {
+    $onayliYorumlar[] = $satir;
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -9,46 +38,155 @@ session_start();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeknoServis | Ana Sayfa</title>
     <link rel="stylesheet" href="/teknik-servis/style.css?v=4">
+    
+<style>
+.yorumlar-bolumu {
+    padding: 65px 8%;
+    background: #f3f6ff;
+    text-align: center;
+}
+
+.yorum-kartlari {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-top: 35px;
+}
+
+.yorum-kart {
+    background: white;
+    padding: 30px 24px;
+    border-radius: 12px;
+    border: 1px solid #dce5ff;
+    text-align: left;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+}
+
+.yorum-yildiz {
+    color: #f5b301;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.yorum-kart p {
+    line-height: 1.8;
+    color: #475569;
+    min-height: 120px;
+}
+
+.yorum-kart h3 {
+    color: #142c60;
+    margin-bottom: 7px;
+}
+
+.yorum-kart span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+@media (max-width: 800px) {
+    .yorum-kartlari {
+        grid-template-columns: 1fr;
+    }
+}
+
+.yorum-form-kutu {
+    max-width: 650px;
+    margin: 40px auto 0;
+    padding: 30px;
+    background: #ffffff;
+    border: 1px solid #dce5ff;
+    border-radius: 12px;
+    text-align: left;
+}
+
+.yorum-form-kutu h3 {
+    color: #142c60;
+    margin-bottom: 12px;
+}
+
+.yorum-form-kutu form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.yorum-form-kutu label {
+    font-weight: bold;
+    color: #142c60;
+}
+
+.yorum-form-kutu select,
+.yorum-form-kutu textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.yorum-form-kutu button {
+    background: #3659e3;
+    color: white;
+    border: none;
+    padding: 13px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.yorum-form-kutu button:hover {
+    background: #243b75;
+}
+
+.yildizlar {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 5px;
+}
+
+.yildizlar label {
+    cursor: pointer;
+    position: relative;
+}
+
+.yildizlar input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.yildizlar span {
+    font-size: 38px;
+    color: #cccccc;
+    transition: color 0.2s;
+}
+
+.yildizlar label:hover span,
+.yildizlar label:hover ~ label span,
+.yildizlar label:has(input:checked) span,
+.yildizlar label:has(input:checked) ~ label span {
+    color: #f5b301;
+}
+
+.yildizlar label:has(input:focus-visible) span {
+    outline: 2px solid #3659e3;
+    border-radius: 4px;
+}
+
+</style>
+
 </head>
 <body>
 
-<header>
-    <div class="ust-menu">
-        <a href="index.php" class="logo">Tekno<span>Servis</span></a>
-        
-<nav aria-label="Ana menü">
-    <a href="index.php" aria-current="page">Ana Sayfa</a>
-    
-<div class="acilir-menu">
-    <a href="#hakkimizda">Kurumsal ▾</a>
-
-    <div class="alt-menu">
-        <a href="#hakkimizda">Hakkımızda</a>
-        <a href="servis-noktalari.php">Bölgelerimiz</a>
-        <a href="#iletisim">İletişim</a>
-    </div>
-</div>
-
-    
-<div class="acilir-menu">
-    <a href="#hizmetlerimiz">Hizmetlerimiz ▾</a>
-
-    <div class="alt-menu">
-        <a href="#laptop-tamiri">Laptop Tamiri</a>
-        <a href="#masaustu-tamiri">Masaüstü Bilgisayar Tamiri</a>
-        <a href="#donanim-degisimi">Donanım Değişimi</a>
-        <a href="#bakim-temizlik">Bakım ve Temizlik</a>
-        <a href="#virus-temizleme">Virüs Temizleme</a>
-        <a href="#yazilim-kurulumu">Yazılım Kurulumu</a>
-    </div>
-</div>
-
-    <a href="giris.php">Giriş Yap</a>
-    <a href="kayit.php">Kayıt Ol</a>
-</nav>
-
-    </div>
-</header>
+<?php
+require_once(__DIR__ . "/baglanti.php");
+require_once(__DIR__ . "/ortak-menu.php");
+?>
 
 <main>
     <section class="tanitim">
@@ -226,6 +364,187 @@ session_start();
 <!-- İletişim Bölümü -->
 
 <!-- İletişim Bölümü -->
+ 
+<!-- MÜŞTERİ MEMNUNİYETİ VE YORUMLAR -->
+<section id="yorumlar" class="yorumlar-bolumu">
+
+    <div class="bolum-baslik">
+        <span class="bolum-etiketi">SİZİN GÖRÜŞLERİNİZ</span>
+        <h2>Müşteri Memnuniyeti ve Yorumlar</h2>
+    <p>
+    Müşterilerimizin TeknoServis hakkındaki
+    değerlendirmelerini inceleyin.
+</p>
+    </div>
+
+<div class="yorum-kartlari">
+
+    <?php if (!empty($onayliYorumlar)): ?>
+
+        <?php foreach ($onayliYorumlar as $yorum): ?>
+
+            <article class="yorum-kart">
+
+                <div class="yorum-yildiz">
+                    <?= str_repeat("★", (int)$yorum["puan"]) ?>
+                    <?= str_repeat("☆", 5 - (int)$yorum["puan"]) ?>
+                </div>
+
+                <p>
+                    <?= nl2br(htmlspecialchars(
+                        $yorum["yorum"],
+                        ENT_QUOTES,
+                        "UTF-8"
+                    )) ?>
+                </p>
+
+                <h3>
+                    <?= htmlspecialchars(
+                        $yorum["adsoyad"],
+                        ENT_QUOTES,
+                        "UTF-8"
+                    ) ?>
+                </h3>
+                <span>Onaylanmış müşteri yorumu</span>
+            </article>
+
+        <?php endforeach; ?>
+
+    <?php else: ?>
+
+        <article class="yorum-kart">
+            <div class="yorum-yildiz">★★★★★</div>
+
+            <p>
+                "Bilgisayarımın arızasını kolayca
+                bildirebildim. Servis sürecini internet
+                üzerinden takip etmek çok kullanışlı."
+            </p>
+
+            <h3>Ayşe Y.</h3>
+            <span>Örnek yorum – Demo</span>
+        </article>
+
+        <article class="yorum-kart">
+            <div class="yorum-yildiz">★★★★★</div>
+
+            <p>
+                "Teknik servis başvurusu oldukça
+                kolaydı. Cihazımın durumunu
+                hesabımdan takip edebildim."
+            </p>
+
+            <h3>Mehmet K.</h3>
+            <span>Örnek yorum – Demo</span>
+        </article>
+
+        <article class="yorum-kart">
+            <div class="yorum-yildiz">★★★★★</div>
+
+            <p>
+                "Servis talebimi kısa sürede
+                oluşturabildim. Kullanımı kolay
+                bir sistem."
+            </p>
+
+            <h3>Zeynep A.</h3>
+            <span>Örnek yorum – Demo</span>
+        </article>
+
+    <?php endif; ?>
+
+</div>
+
+<div class="yorum-form-kutu">
+    
+<?php if (!empty($_SESSION["yorum_bildirim"])): ?>
+    <p role="status" style="color: green; font-weight: bold;">
+        <?= htmlspecialchars(
+            $_SESSION["yorum_bildirim"],
+            ENT_QUOTES,
+            "UTF-8"
+        ) ?>
+    </p>
+
+    <?php unset($_SESSION["yorum_bildirim"]); ?>
+<?php endif; ?>
+
+    <h3>Deneyiminizi Bizimle Paylaşın</h3>
+    <p>
+        TeknoServis hizmetlerimizden memnun kaldınız mı?
+        Yorumunuzu ve puanınızı bizimle paylaşabilirsiniz.
+    </p>
+
+    <?php if (isset($_SESSION["kullanici_id"]) &&
+              ($_SESSION["rol"] ?? "") === "musteri"): ?>
+
+        <form action="yorum-kaydet.php" method="POST">
+<input type="hidden" name="csrf_token"
+       value="<?= htmlspecialchars($_SESSION["csrf_token"], ENT_QUOTES, "UTF-8") ?>">
+            <label for="yorum-puan">Puanınız</label>
+        
+<div class="yildiz-puanlama">
+    <p>Hizmetimize kaç yıldız verirsiniz?</p>
+
+    <div class="yildizlar" role="radiogroup" aria-label="Yıldız puanı">
+        <label>
+            <input type="radio" name="puan" value="1" required>
+            <span>★</span>
+        </label>
+        <label>
+            <input type="radio" name="puan" value="2">
+            <span>★</span>
+        </label>
+        <label>
+            <input type="radio" name="puan" value="3">
+            <span>★</span>
+        </label>
+        <label>
+            <input type="radio" name="puan" value="4">
+            <span>★</span>
+        </label>
+        <label>
+            <input type="radio" name="puan" value="5">
+            <span>★</span>
+        </label>
+    </div>
+</div>
+
+
+            <label for="yorum-metin">Yorumunuz</label>
+
+            <textarea
+                id="yorum-metin"
+                name="yorum"
+                rows="4"
+                maxlength="1000"
+                placeholder="Deneyiminizi buraya yazabilirsiniz..."
+                required
+            ></textarea>
+
+            <button type="submit">
+                Yorumu Gönder
+            </button>
+
+        </form>
+
+    <?php else: ?>
+
+        <p>
+            Yorum yapabilmek için müşteri hesabınızla
+            giriş yapmanız gerekiyor.
+        </p>
+
+        <a href="giris.php" class="buton">
+            Giriş Yap
+        </a>
+
+    <?php endif; ?>
+
+</div>
+
+</section>
+
 <section id="iletisim" class="iletisim-bolumu">
 
     <div class="bolum-baslik">
@@ -341,8 +660,25 @@ session_start();
 
         <div class="footer-kolon">
             <h3>Hızlı İşlemler</h3>
-            <a href="kayit.php">Kayıt Ol</a>
-            <a href="giris.php">Giriş Yap</a>
+            
+<?php if (isset($_SESSION["kullanici_id"])): ?>
+
+    <?php if (($_SESSION["rol"] ?? "") === "musteri"): ?>
+
+        <a href="musteri/musteri-panel.php">Panelim</a>
+        <a href="#yorumlar">Yorum Yap</a>
+
+    <?php endif; ?>
+
+    <a href="musteri/cikis.php">Çıkış Yap</a>
+
+<?php else: ?>
+
+    <a href="giris.php">Giriş Yap</a>
+    <a href="kayit.php">Kayıt Ol</a>
+
+<?php endif; ?>
+
             <a href="giris.php">Servis Talebi Oluştur</a>
             <a href="giris.php">Servisimi Takip Et</a>
         </div>

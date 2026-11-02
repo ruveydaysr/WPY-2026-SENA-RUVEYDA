@@ -36,7 +36,7 @@ if ($email === "" || $sifre === "") {
         if ($bulundu && password_verify($sifre, $kayitli_sifre)) {
            
 $sayfalar = [
-    "musteri"   => "musteri/musteri-panel.php",
+    "musteri"   => "index.php",
     "root"      => "root/root-panel.php",
     "mudur"     => "mudurluk/mudur-panel.php",
     "yonetici"  => "yonetici/yonetici-panel.php",

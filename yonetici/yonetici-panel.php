@@ -148,6 +148,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 $mesaj = $_SESSION["atama_mesaji"] ?? "";
 unset($_SESSION["atama_mesaji"]);
 
+ // ONAY BEKLEYEN MÜŞTERİ YORUMLARI
+$yorumSayisiSonuc = mysqli_query(
+    $baglanti,
+    "SELECT COUNT(*) AS toplam
+     FROM musteri_yorumlari
+     WHERE durum = 'Bekliyor'"
+);
+
+$bekleyenYorumSayisi = (int) mysqli_fetch_assoc(
+    $yorumSayisiSonuc
+)["toplam"];
+
 // GELEN MESAJ SAYISI
 $yeniMesajSonuc = mysqli_query(
     $baglanti,
@@ -545,6 +557,31 @@ $servisListesi = mysqli_fetch_all(
             Şubeleri Yönet
         </a>
     </div>
+
+<!-- MÜŞTERİ YORUMLARI YÖNETİMİ -->
+<div class="yonetici-mesaj-alani">
+    <div>
+        <h2>⭐ Müşteri Yorumları</h2>
+
+<p class="yeni-mesaj-sayaci">
+    <?php if ($bekleyenYorumSayisi > 0): ?>
+        🔔 <?= $bekleyenYorumSayisi ?> yorum onay bekliyor.
+    <?php else: ?>
+        ✓ Onay bekleyen yorum bulunmuyor.
+    <?php endif; ?>
+</p>
+
+        <p>
+            Müşterilerin verdiği yıldız puanlarını ve
+            yorumlarını inceleyebilir, onaylayabilir
+            veya reddedebilirsiniz.
+        </p>
+    </div>
+
+    <a href="musteri-yorumlari.php" class="mesajlar-buton">
+        Yorumları Yönet
+    </a>
+</div>
 
     <h2>Müşteri Talepleri ve Teknisyen Atama</h2>
 

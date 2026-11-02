@@ -47,37 +47,7 @@ $iller = array_unique(array_column($subeler, "il"));
 </head>
 <body>
 
-<header>
-    <div class="ust-menu">
-        <a href="/teknik-servis/index.php" class="logo">
-            Tekno<span>Servis</span>
-        </a>
-
-        <nav aria-label="Müşteri menüsü">
-            <a href="/teknik-servis/musteri/musteri-panel.php">
-                Panelim
-            </a>
-
-            <a href="/teknik-servis/musteri/servis-olustur.php"
-               aria-current="page">
-                Servis Oluştur
-            </a>
-
-            <a href="/teknik-servis/musteri/servis-takip.php">
-                Servis Takip
-            </a>
-
-            <a href="/teknik-servis/musteri/profil.php">
-                Profilim
-            </a>
-
-            <a href="/teknik-servis/musteri/cikis.php"
-               onclick="return confirm('Çıkış yapmak istiyor musunuz?')">
-                Çıkış Yap
-            </a>
-        </nav>
-    </div>
-</header>
+<?php require_once(__DIR__ . "/../ortak-menu.php"); ?>
 
 <main>
     <section class="form-alani">
