@@ -205,28 +205,61 @@ while ($satir = mysqli_fetch_assoc($teknisyenSonuc)) {
     $teknisyenler[] = $satir;
 }
 
+// ARAMA VE FİLTRELEME
+$aranan_servis = trim((string)($_GET["servis_no"] ?? ""));
+$secilen_il = trim((string)($_GET["il"] ?? ""));
+$secilen_durum = trim((string)($_GET["durum"] ?? ""));
+
+$kosullar = [];
+$parametreler = [];
+$tipler = "";
+
+if ($aranan_servis !== "") {
+    if (ctype_digit($aranan_servis) && (int)$aranan_servis > 0) {
+        $kosullar[] = "s.id = ?";
+        $parametreler[] = (int)$aranan_servis;
+        $tipler .= "i";
+    } else {
+        $kosullar[] = "1 = 0";
+    }
+}
+
+if ($secilen_il !== "") {
+    $kosullar[] = "s.il = ?";
+    $parametreler[] = $secilen_il;
+    $tipler .= "s";
+}
+
+if ($secilen_durum !== "") {
+    $kosullar[] = "s.durum = ?";
+    $parametreler[] = $secilen_durum;
+    $tipler .= "s";
+}
+
+$where = empty($kosullar)
+    ? ""
+    : " WHERE " . implode(" AND ", $kosullar);
+
 // SAYFALAMA
 $sayfa_basina = 5;
 
-$toplamSonuc = mysqli_query(
+$toplamSorgu = mysqli_prepare(
     $baglanti,
-    "SELECT COUNT(*) AS toplam FROM servisler"
+    "SELECT COUNT(*) AS toplam FROM servisler AS s $where"
 );
 
-$toplam_kayit =
-    (int)mysqli_fetch_assoc($toplamSonuc)["toplam"];
+if ($tipler !== "") {
+    mysqli_stmt_bind_param($toplamSorgu, $tipler, ...$parametreler);
+}
 
-$toplam_sayfa = max(
-    1,
-    (int)ceil($toplam_kayit / $sayfa_basina)
-);
+mysqli_stmt_execute($toplamSorgu);
+$toplamSonuc = mysqli_stmt_get_result($toplamSorgu);
+$toplam_kayit = (int)mysqli_fetch_assoc($toplamSonuc)["toplam"];
+mysqli_stmt_close($toplamSorgu);
 
-$sayfa = filter_input(
-    INPUT_GET,
-    "sayfa",
-    FILTER_VALIDATE_INT
-);
+$toplam_sayfa = max(1, (int)ceil($toplam_kayit / $sayfa_basina));
 
+$sayfa = filter_input(INPUT_GET, "sayfa", FILTER_VALIDATE_INT);
 $sayfa = ($sayfa && $sayfa > 0)
     ? min($sayfa, $toplam_sayfa)
     : 1;
@@ -234,41 +267,56 @@ $sayfa = ($sayfa && $sayfa > 0)
 $baslangic = ($sayfa - 1) * $sayfa_basina;
 
 // SERVİS KAYITLARI VE ŞUBE BİLGİLERİ
-$servisSonuc = mysqli_query(
-    $baglanti,
-    "SELECT
-        s.id,
-        s.il,
-        s.hizmet_turu,
-        s.teslim_durumu,
-        s.servis_noktasi_id,
-        s.cihaz,
-        s.marka,
-        s.model,
-        s.ariza,
-        s.durum,
-        s.tarih,
-        s.teknisyen_id,
-        m.adsoyad AS musteri_adi,
-        m.telefon AS musteri_telefon,
-        t.adsoyad AS teknisyen_adi,
-        sn.sube_adi,
-        sn.ilce AS sube_ilce
-     FROM servisler AS s
-     LEFT JOIN kullanicilar AS m
-        ON m.id = s.kullanici_id
-     LEFT JOIN kullanicilar AS t
-        ON t.id = s.teknisyen_id
-     LEFT JOIN servis_noktalari AS sn
-        ON sn.id = s.servis_noktasi_id
-     ORDER BY s.id DESC
-     LIMIT $baslangic, $sayfa_basina"
+$sql = "SELECT
+    s.id,
+    s.il,
+    s.hizmet_turu,
+    s.teslim_durumu,
+    s.servis_noktasi_id,
+    s.cihaz,
+    s.marka,
+    s.model,
+    s.ariza,
+    s.durum,
+    s.tarih,
+    s.teknisyen_id,
+    m.adsoyad AS musteri_adi,
+    m.telefon AS musteri_telefon,
+    t.adsoyad AS teknisyen_adi,
+    sn.sube_adi,
+    sn.ilce AS sube_ilce
+FROM servisler AS s
+LEFT JOIN kullanicilar AS m
+    ON m.id = s.kullanici_id
+LEFT JOIN kullanicilar AS t
+    ON t.id = s.teknisyen_id
+LEFT JOIN servis_noktalari AS sn
+    ON sn.id = s.servis_noktasi_id
+$where
+ORDER BY s.id DESC
+LIMIT ?, ?";
+
+$servisSorgu = mysqli_prepare($baglanti, $sql);
+
+$listeTipler = $tipler . "ii";
+$listeParametreler = array_merge(
+    $parametreler,
+    [$baslangic, $sayfa_basina]
 );
 
-$servisListesi = mysqli_fetch_all(
-    $servisSonuc,
-    MYSQLI_ASSOC
+mysqli_stmt_bind_param(
+    $servisSorgu,
+    $listeTipler,
+    ...$listeParametreler
 );
+
+mysqli_stmt_execute($servisSorgu);
+
+$servisSonuc = mysqli_stmt_get_result($servisSorgu);
+$servisListesi = mysqli_fetch_all($servisSonuc, MYSQLI_ASSOC);
+
+mysqli_stmt_close($servisSorgu);
+
 ?>
 
 <!DOCTYPE html>
@@ -558,6 +606,22 @@ $servisListesi = mysqli_fetch_all(
         </a>
     </div>
 
+<!-- MÜŞTERİ HESAP YÖNETİMİ -->
+<div class="yonetici-mesaj-alani">
+    <div>
+        <h2>👥 Müşteri Yönetimi</h2>
+
+        <p>
+            Kayıtlı müşterileri görüntüleyebilir,
+            hesaplarını aktif veya pasif yapabilirsiniz.
+        </p>
+    </div>
+
+    <a href="musteri-yonetimi.php" class="mesajlar-buton">
+        Müşterileri Yönet
+    </a>
+</div>
+
 <!-- MÜŞTERİ YORUMLARI YÖNETİMİ -->
 <div class="yonetici-mesaj-alani">
     <div>
@@ -586,49 +650,73 @@ $servisListesi = mysqli_fetch_all(
     <h2>Müşteri Talepleri ve Teknisyen Atama</h2>
 
     <!-- FİLTRELER -->
-    <div class="servis-filtreleri">
+    
+<!-- SERVİS ARAMA VE FİLTRELEME -->
+<form method="GET" action="yonetici-panel.php" class="servis-filtreleri">
 
-        <input
-            type="number"
-            id="servisAra"
-            placeholder="Servis numarası ara..."
-            min="1"
-        >
+    <input
+        type="number"
+        name="servis_no"
+        id="servisAra"
+        placeholder="Servis numarası ara..."
+        min="1"
+        value="<?= guvenli($aranan_servis) ?>"
+    >
 
-        <select id="ilFiltre">
-            <option value="">Tüm İller</option>
+    <select name="il" id="ilFiltre">
+        <option value="">Tüm İller</option>
 
-            <?php
-            $iller = [];
+        <?php
+        $ilSonuc = mysqli_query(
+            $baglanti,
+            "SELECT DISTINCT il
+             FROM servisler
+             WHERE il IS NOT NULL AND TRIM(il) <> ''
+             ORDER BY il"
+        );
 
-            foreach ($servisListesi as $kayit) {
-                if (!empty($kayit["il"])) {
-                    $iller[] = $kayit["il"];
-                }
-            }
+        while ($ilSatir = mysqli_fetch_assoc($ilSonuc)):
+            $il = $ilSatir["il"];
+        ?>
+            <option value="<?= guvenli($il) ?>"
+                <?= $secilen_il === $il ? "selected" : "" ?>>
+                <?= guvenli($il) ?>
+            </option>
+        <?php endwhile; ?>
+    </select>
 
-            $iller = array_unique($iller);
-            sort($iller);
+    <select name="durum" id="durumFiltre">
+        <option value="">Tüm Durumlar</option>
 
-            foreach ($iller as $il):
-            ?>
-                <option value="<?= guvenli($il) ?>">
-                    <?= guvenli($il) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+        <?php
+        $durumlar = [
+            "Bekliyor",
+            "İnceleniyor",
+            "İşlemde",
+            "Parça Bekliyor",
+            "Tamamlandı",
+            "Teslim Edildi"
+        ];
 
-        <select id="durumFiltre">
-            <option value="">Tüm Durumlar</option>
-            <option value="Bekliyor">Bekliyor</option>
-            <option value="İnceleniyor">İnceleniyor</option>
-            <option value="İşlemde">İşlemde</option>
-            <option value="Parça Bekliyor">Parça Bekliyor</option>
-            <option value="Tamamlandı">Tamamlandı</option>
-            <option value="Teslim Edildi">Teslim Edildi</option>
-        </select>
+        foreach ($durumlar as $durum):
+        ?>
+            <option value="<?= guvenli($durum) ?>"
+                <?= $secilen_durum === $durum ? "selected" : "" ?>>
+                <?= guvenli($durum) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
 
-    </div>
+    <button type="submit" class="buton">
+        Ara / Filtrele
+    </button>
+
+    <a href="yonetici-panel.php" class="buton"
+       style="background: #64748b; text-align: center;">
+        Temizle
+    </a>
+
+</form>
 
     <?php if ($mesaj !== ""): ?>
         <p class="bilgi"><?= guvenli($mesaj) ?></p>
@@ -854,7 +942,12 @@ $servisListesi = mysqli_fetch_all(
                 <?php for ($i = 1; $i <= $toplam_sayfa; $i++): ?>
 
                     <a
-                        href="?sayfa=<?= $i ?>"
+                        href="?<?= guvenli(http_build_query([
+    'servis_no' => $aranan_servis,
+    'il' => $secilen_il,
+    'durum' => $secilen_durum,
+    'sayfa' => $i
+])) ?>"
                         style="padding:10px 15px;
                                background:<?= $i == $sayfa ? '#3659e3' : '#eef2ff' ?>;
                                color:<?= $i == $sayfa ? 'white' : '#243b75' ?>;
@@ -874,65 +967,6 @@ $servisListesi = mysqli_fetch_all(
 
 </section>
 </main>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const servisAra = document.getElementById("servisAra");
-    const ilFiltre = document.getElementById("ilFiltre");
-    const durumFiltre = document.getElementById("durumFiltre");
-
-    const tablo = document.querySelector(".tablo-kapsayici table");
-    const satirlar = tablo.querySelectorAll("tbody tr");
-
-    function filtrele() {
-
-        const arananNo = servisAra.value.trim();
-
-        const secilenIl = ilFiltre.value
-            .trim()
-            .toLocaleLowerCase("tr-TR");
-
-        const secilenDurum = durumFiltre.value
-            .trim()
-            .toLocaleLowerCase("tr-TR");
-
-        satirlar.forEach(function (satir) {
-
-            const hucreler = satir.querySelectorAll("td");
-
-            if (hucreler.length < 13) return;
-
-            const servisNo = hucreler[0].textContent.trim();
-
-            const il = hucreler[2].textContent
-                .trim()
-                .toLocaleLowerCase("tr-TR");
-
-            const durum = hucreler[9].textContent
-                .trim()
-                .toLocaleLowerCase("tr-TR");
-
-            const noUygun =
-                arananNo === "" || servisNo === arananNo;
-
-            const ilUygun =
-                secilenIl === "" || il === secilenIl;
-
-            const durumUygun =
-                secilenDurum === "" || durum === secilenDurum;
-
-            satir.style.display =
-                noUygun && ilUygun && durumUygun ? "" : "none";
-        });
-    }
-
-    servisAra.addEventListener("input", filtrele);
-    ilFiltre.addEventListener("change", filtrele);
-    durumFiltre.addEventListener("change", filtrele);
-
-});
-</script>
 
 </body>
 </html>

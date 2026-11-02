@@ -9,10 +9,10 @@ if (empty($_SESSION["csrf_token"])) {
 }
 $sorgu = mysqli_prepare(
     $baglanti,
-    "SELECT puan, yorum, durum, tarih
-     FROM musteri_yorumlari
-     WHERE kullanici_id = ?
-     ORDER BY tarih DESC, id DESC"
+    "SELECT id, puan, yorum, durum, tarih
+ FROM musteri_yorumlari
+ WHERE kullanici_id = ?
+ ORDER BY tarih DESC, id DESC"
 );
 
 mysqli_stmt_bind_param($sorgu, "i", $id);
@@ -128,6 +128,14 @@ function guvenli($deger) {
 
 <main class="yorumlarim-alan">
     <h1>Yorumlarım</h1>
+    
+<?php if (!empty($_SESSION["yorum_bildirim"])): ?>
+    <p class="yorumlarim-kart" role="status">
+        <?= guvenli($_SESSION["yorum_bildirim"]) ?>
+    </p>
+    <?php unset($_SESSION["yorum_bildirim"]); ?>
+<?php endif; ?>
+
 <div style="margin: 20px 0;">
     <a href="#yeni-yorum" class="buton">
         ⭐ Yeni Yorum Yap
@@ -213,6 +221,31 @@ function guvenli($deger) {
                 <p class="yorumlarim-tarih">
                     Gönderim tarihi: <?= guvenli($yorum["tarih"]) ?>
                 </p>
+
+<div style="display: flex; gap: 10px; margin-top: 15px;">
+
+    <a href="yorum-duzenle.php?id=<?= (int)$yorum['id'] ?>"
+       class="buton">
+        ✏️ Düzenle
+    </a>
+
+    <form action="yorum-sil.php" method="POST"
+          onsubmit="return confirm('Bu yorumu silmek istediğinize emin misiniz?');">
+
+        <input type="hidden" name="yorum_id"
+               value="<?= (int)$yorum['id'] ?>">
+
+        <input type="hidden" name="csrf_token"
+               value="<?= guvenli($_SESSION['csrf_token']) ?>">
+
+        <button type="submit" class="buton"
+                style="background: #dc3545;">
+            🗑️ Sil
+        </button>
+
+    </form>
+
+</div>
 
             </article>
         <?php endforeach; ?>

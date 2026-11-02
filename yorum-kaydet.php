@@ -4,7 +4,7 @@ require_once(__DIR__ . "/yetki-kontrol.php");
 yetkiKontrol(["musteri"]);
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    header("Location: /teknik-servis/index.php#yorumlar");
+    header("Location: /teknik-servis/musteri/yorumlarim.php");
     exit();
 }
 
@@ -61,7 +61,8 @@ try {
     $_SESSION["yorum_bildirim"] =
         "Yorumunuz başarıyla gönderildi. Yönetici onayından sonra yayınlanacaktır.";
 
-    header("Location: /teknik-servis/index.php#yorumlar");
+    header("Location: /teknik-servis/musteri/yorumlarim.php");
+
     exit();
 
 } catch (mysqli_sql_exception $hata) {
