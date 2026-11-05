@@ -33,8 +33,10 @@ $izin_verilen_roller = [
     "musteri",
     "teknisyen",
     "teknik",
+    "yonetici",
     "mudur"
 ];
+
 
 if (!$kullanici_id || $kullanici_id < 1) {
     http_response_code(400);

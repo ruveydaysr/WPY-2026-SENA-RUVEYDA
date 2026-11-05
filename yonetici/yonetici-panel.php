@@ -1,19 +1,13 @@
 
 <?php
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-session_start();
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["yonetici"]);
 
-if (
-    !isset($_SESSION["kullanici_id"]) ||
-    ($_SESSION["rol"] ?? "") !== "yonetici"
-) {
-    header("Location: ../giris.php");
-    exit();
-}
-
-require_once("../baglanti.php");
 mysqli_set_charset($baglanti, "utf8mb4");
+
 
 function guvenli($deger) {
     return htmlspecialchars((string)$deger, ENT_QUOTES, "UTF-8");
@@ -523,6 +517,10 @@ mysqli_stmt_close($servisSorgu);
                aria-current="page">
                 Yönetici Paneli
             </a>
+
+<a href="/teknik-servis/yonetici/teknisyen-yonetimi.php">
+    Teknisyen Yönetimi
+</a>
 
             <a href="/teknik-servis/cikis.php"
                onclick="return confirm('Çıkış yapmak istiyor musunuz?')">

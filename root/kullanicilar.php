@@ -50,6 +50,7 @@ $roller = [
     "musteri" => "Müşteri",
     "teknisyen" => "Teknisyen",
     "teknik" => "Teknik Ekip",
+    "yonetici" => "Yönetici",
     "mudur" => "Müdür"
 ];
 

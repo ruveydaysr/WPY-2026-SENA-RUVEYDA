@@ -1,17 +1,10 @@
 
 <?php
-session_start();
+require_once(__DIR__ . "/../yetki-kontrol.php");
+yetkiKontrol(["yonetici"]);
 
-if (
-    !isset($_SESSION["kullanici_id"]) ||
-    ($_SESSION["rol"] ?? "") !== "yonetici"
-) {
-    header("Location: ../giris.php");
-    exit();
-}
-
-require_once("../baglanti.php");
 mysqli_set_charset($baglanti, "utf8mb4");
+
 if (empty($_SESSION["csrf_token"])) {
     $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
 }
@@ -75,6 +68,7 @@ unset($_SESSION["il_mesaji"]);
                     <th>Görev İli</th>
                     <th>Durum</th>
                     <th>İl Değiştir</th>
+                    <th>Hesap İşlemi</th>
                 </tr>
             </thead>
             <tbody>
@@ -107,6 +101,28 @@ unset($_SESSION["il_mesaji"]);
         <button type="submit">Kaydet</button>
     </form>
 </td>
+
+<td>
+    <form action="teknisyen-durum-guncelle.php"
+          method="POST"
+          onsubmit="return confirm('Teknisyenin hesap durumunu değiştirmek istiyor musunuz?');">
+
+        <input type="hidden"
+               name="teknisyen_id"
+               value="<?= (int) $teknisyen["id"] ?>">
+
+        <input type="hidden"
+               name="csrf_token"
+               value="<?= guvenli($_SESSION["csrf_token"]) ?>">
+
+        <button type="submit">
+            <?= $teknisyen["durum"] === "aktif"
+                ? "Pasif Yap"
+                : "Aktif Yap" ?>
+        </button>
+    </form>
+</td>
+
                     </tr>
                 <?php endwhile; ?>
             </tbody>
